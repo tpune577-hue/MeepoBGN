@@ -34,6 +34,22 @@ npm run dev
 | Imagen 4 Standard | $0.04 (~1.4฿) |
 | Imagen 4 Ultra | $0.06 (~2.1฿) |
 
+## Deploy (Vercel)
+
+Repo นี้เป็น Next.js ที่ **root** ของโปรเจกต์ (ไม่ใช่โฟลเดอร์ `mvp/`)
+
+ใน Vercel → Project → **Settings**:
+
+1. **General → Root Directory** → ว่างไว้ (`.`) ห้ามใส่ `mvp`
+2. **Git → Production Branch** → `main`
+3. **Environment Variables** → `GOOGLE_AI_API_KEY`
+4. **Deployment Protection** → ปิด Vercel Authentication บน Production (ถ้าต้องการให้คนทั่วไปเข้าได้)
+
+ถ้าเห็น `404 NOT_FOUND` มักเกิดจาก:
+- Root Directory ยังชี้ `mvp` (โฟลเดอร์นี้ไม่มีใน git แล้ว)
+- Production Branch เป็น `develop` แต่ยังไม่มี branch นั้น
+- มีหลาย Vercel project ผูก repo เดียวกัน — ควรเหลือแค่ project เดียว
+
 ## Branch
 
 - `main` — production
