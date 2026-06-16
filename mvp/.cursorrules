@@ -1,0 +1,49 @@
+# MeepoBGN — Cursor Rules
+
+## Project
+Chibi Head Sticker Generator สำหรับสร้าง sticker ติด Meepo figure
+- อัพโหลดรูปหน้า → Gemini วิเคราะห์ → Imagen 4 gen sticker
+
+## Stack
+- Next.js 14 App Router (ไม่ใช้ pages/)
+- TypeScript strict mode
+- Tailwind CSS
+- @google/genai SDK (Gemini 2.5 Flash + Imagen 4)
+
+## Structure
+```
+app/
+  page.tsx              ← client UI ("use client")
+  layout.tsx            ← root layout, Nunito font
+  globals.css           ← Tailwind + custom keyframes
+  api/
+    generate/
+      route.ts          ← POST handler (server-side only)
+```
+
+## API Contract
+POST /api/generate
+  body: { imageBase64, imageMimeType, stylePrompt, imageModel }
+  returns: { features, imageBase64, mimeType } | { error }
+
+## Key Rules
+- GOOGLE_AI_API_KEY อยู่ฝั่ง server เท่านั้น (route.ts) ห้ามส่งไป client เด็ดขาด
+- Push ไปที่ develop เท่านั้น ห้าม push main โดยตรง
+- ใช้ TypeScript strict — ห้าม any โดยไม่มีเหตุผล
+- Tailwind-first สำหรับ styling, inline style เฉพาะ dynamic values
+- Component เล็กๆ แยกไว้ที่ components/ ถ้าใช้หลายที่
+
+## Models (Imagen 4)
+- imagen-4.0-fast-generate-001    → $0.02/img (default)
+- imagen-4.0-generate-001         → $0.04/img
+- imagen-4.0-ultra-generate-001   → $0.06/img
+
+## Vision Model
+- gemini-2.5-flash → วิเคราะห์หน้าก่อน gen prompt
+
+## What's NOT here yet (MVP gaps to fill)
+- [ ] Loading skeleton / progress animation ที่ดีขึ้น
+- [ ] Sticker history (localStorage หรือ Supabase ถ้าขยาย)
+- [ ] Background removal จาก sticker output
+- [ ] Vercel deployment config
+- [ ] Rate limiting บน API route

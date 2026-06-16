@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-nunito: "Nunito", sans-serif;
+
+    --bgn-bg: oklch(0.76 0.14 5);
+    --bgn-surface: oklch(1 0 0);
+    --bgn-ink: oklch(0.35 0.08 355);
+    --bgn-muted: oklch(0.52 0.06 355);
+    --bgn-on-bg: oklch(1 0 0);
+    --bgn-muted-on-bg: oklch(0.97 0.02 5);
+    --bgn-primary: oklch(0.76 0.14 5);
+    --bgn-primary-hover: oklch(0.68 0.16 5);
+    --bgn-primary-soft: oklch(0.97 0.03 5);
+    --bgn-accent: oklch(0.82 0.11 5);
+    --bgn-border: oklch(0.92 0.03 5);
+    --bgn-blossom: oklch(0.97 0.03 5);
+    --bgn-blossom-core: oklch(0.90 0.05 5);
+    --bgn-error: oklch(0.55 0.20 25);
+    --bgn-error-bg: oklch(0.96 0.03 25);
+    --bgn-success: oklch(0.52 0.14 155);
+  }
+}
+
+@layer utilities {
+  .font-nunito { font-family: var(--font-nunito); }
+  .text-balance { text-wrap: balance; }
+}
+
+@keyframes meepleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes sakuraDrift {
+  0%, 100% { transform: translateY(0) rotate(var(--rotate, 0deg)); opacity: 0.35; }
+  50% { transform: translateY(-8px) rotate(calc(var(--rotate, 0deg) + 6deg)); opacity: 0.55; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(1 0 0 / 0.45); }
+  70% { box-shadow: 0 0 0 10px oklch(1 0 0 / 0); }
+}
+
+.animate-meeple-bob { animation: meepleBob 2.4s ease-in-out infinite; }
+.animate-sakura-drift { animation: sakuraDrift 4s ease-in-out infinite; }
+.animate-fade-up { animation: fadeUp 0.28s ease-out both; }
+.animate-pop-in { animation: popIn 0.35s ease-out both; }
+.animate-pulse-soft { animation: pulseSoft 2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-meeple-bob,
+  .animate-sakura-drift,
+  .animate-fade-up,
+  .animate-pop-in,
+  .animate-pulse-soft {
+    animation: none;
+  }
+}

@@ -1,0 +1,7 @@
+# Accidental root-level installs / nested clones
+/node_modules/
+/package.json
+/package-lock.json
+/MeepoBGN/
+
+.DS_Store
