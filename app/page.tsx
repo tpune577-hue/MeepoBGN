@@ -3,6 +3,9 @@
 import { useState, useRef, useCallback } from "react";
 import { MeepoMascot } from "../components/MeepoMascot";
 import { SakuraDecor } from "../components/SakuraDecor";
+import { TemplatePicker } from "../components/TemplatePicker";
+import { MeepoHeadUpload } from "../components/MeepoHeadUpload";
+import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplateId } from "@/lib/meepo-templates";
 
 type Step = "idle" | "analyzing" | "generating" | "done" | "error";
 
@@ -23,6 +26,7 @@ export default function Page() {
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [templateId, setTemplateId] = useState<MeepoTemplateId>(DEFAULT_TEMPLATE);
   const [dragging, setDragging] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -62,6 +66,7 @@ export default function Page() {
         body: JSON.stringify({
           imageBase64: photoB64,
           imageMimeType: photoMime,
+          templateId,
         }),
       });
 
@@ -80,7 +85,7 @@ export default function Page() {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
     }
-  }, [photoB64, photoMime, step]);
+  }, [photoB64, photoMime, templateId, step]);
 
   const download = useCallback(() => {
     if (!result) return;
@@ -92,6 +97,7 @@ export default function Page() {
 
   const isLoading = step === "analyzing" || step === "generating";
   const curIdx = STEP_KEYS.indexOf(step as (typeof STEP_KEYS)[number]);
+  const template = getTemplate(templateId);
 
   return (
     <main className="min-h-screen bg-bgn-bg text-bgn-on-bg font-nunito px-4 py-8 pb-16 relative overflow-hidden">
@@ -111,8 +117,17 @@ export default function Page() {
           </p>
         </header>
 
-        {/* Upload */}
-        <div
+        <TemplatePicker
+          value={templateId}
+          onChange={setTemplateId}
+          disabled={isLoading}
+        />
+
+        <MeepoHeadUpload
+          template={template}
+          photo={photo}
+          dragging={dragging}
+          onClick={() => fileRef.current?.click()}
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
@@ -123,37 +138,7 @@ export default function Page() {
             setDragging(true);
           }}
           onDragLeave={() => setDragging(false)}
-          onClick={() => fileRef.current?.click()}
-          className={`relative overflow-hidden rounded-2xl border-2 border-dashed cursor-pointer transition-colors duration-200 flex items-center justify-center bg-bgn-surface shadow-sm
-            ${dragging ? "border-bgn-primary-hover bg-bgn-primary-soft" : photo ? "border-bgn-border" : "border-white/60 hover:border-white hover:bg-white"}
-            ${!photo ? "min-h-[180px]" : ""}`}
-        >
-          {photo ? (
-            <div className="w-full relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo}
-                alt="upload"
-                className="w-full max-h-[270px] object-cover rounded-[14px] block"
-              />
-              <span className="absolute bottom-2 right-2 bg-bgn-ink/75 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                เปลี่ยนรูป
-              </span>
-            </div>
-          ) : (
-            <div className="text-center p-8">
-              <div className="flex justify-center mb-3">
-                <MeepoMascot size={56} />
-              </div>
-              <div className="font-extrabold text-[15px] text-bgn-ink mb-1">
-                อัปโหลดรูปหน้าของคุณ
-              </div>
-              <div className="text-xs text-bgn-muted font-semibold">
-                แตะหรือลากรูปมาวาง
-              </div>
-            </div>
-          )}
-        </div>
+        />
         <input
           ref={fileRef}
           type="file"
