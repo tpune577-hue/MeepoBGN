@@ -48,7 +48,7 @@ export function MeepoHeadUpload({
             x="0"
             y="0"
             width="100"
-            height="120"
+            height="100"
             preserveAspectRatio="xMidYMid slice"
             clipPath={`url(#${clipId})`}
           />

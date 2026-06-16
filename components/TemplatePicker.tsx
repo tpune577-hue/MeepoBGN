@@ -4,7 +4,7 @@ function TemplateSilhouette({ template, active }: { template: MeepoTemplate; act
   return (
     <svg
       viewBox={template.viewBox}
-      className="w-14 h-[4.25rem] mx-auto"
+      className="w-16 h-16 mx-auto"
       aria-hidden
     >
       <path

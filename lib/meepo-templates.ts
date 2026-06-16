@@ -16,22 +16,22 @@ export const MEEPO_TEMPLATES: Record<MeepoTemplateId, MeepoTemplate> = {
   human: {
     id: "human",
     label: "หัวคน",
-    description: "หูมนุษย์กลมๆ",
+    description: "หูมนุษย์ยื่นข้าง",
     shapePrompt:
-      "human chibi head shape with small rounded human ears on both sides, no animal ears, no horns, round oversized face",
-    viewBox: "0 0 100 120",
+      "human chibi head shape, round oversized face, small rounded human ears sticking out on both sides at mid-height, no animal ears, no horns",
+    viewBox: "0 0 100 100",
     outlinePath:
-      "M50 14 C34 14 22 28 22 44 C22 52 24 58 28 63 C24 67 20 74 20 82 C20 90 26 96 34 96 H38 V104 C38 110 43 114 50 114 C57 114 62 110 62 104 V96 H66 C74 96 80 90 80 82 C80 74 76 67 72 63 C76 58 78 52 78 44 C78 28 66 14 50 14 Z",
+      "M50 8 C72 8 85 26 85 48 C91 48 93 60 84 62 C82 80 68 93 50 93 C32 93 18 80 16 62 C7 60 9 48 15 48 C15 26 28 8 50 8 Z",
   },
   animal: {
     id: "animal",
     label: "หัวสัตว์",
-    description: "มีหูสัตว์",
+    description: "หูกลมใหญ่",
     shapePrompt:
-      "cute kawaii head with large fluffy animal ears (cat/bunny style) rising prominently from the top of the head, round chibi face below the ears",
-    viewBox: "0 0 100 120",
+      "cute kawaii animal head with two large round mouse/bear ears on the top corners of the head, round chibi face below the ears",
+    viewBox: "0 0 100 100",
     outlinePath:
-      "M32 38 L22 10 L40 34 Z M68 38 L78 10 L60 34 Z M50 28 C36 28 26 40 26 54 C26 62 28 68 32 72 C28 76 24 82 24 90 C24 98 30 104 38 104 H42 V110 C42 115 46 118 50 118 C54 118 58 115 58 110 V104 H62 C70 104 76 98 76 90 C76 82 72 76 68 72 C72 68 74 62 74 54 C74 40 64 28 50 28 Z",
+      "M4 28 a20 20 0 1 0 40 0 a20 20 0 1 0 -40 0 Z M56 28 a20 20 0 1 0 40 0 a20 20 0 1 0 -40 0 Z M16 58 a34 36 0 1 0 68 0 a34 36 0 1 0 -68 0 Z",
   },
 };
 
