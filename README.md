@@ -9,16 +9,14 @@ Chibi Head Sticker Generator — อัพโหลดรูปหน้า → 
 git clone https://github.com/tpune577-hue/MeepoBGN.git
 cd MeepoBGN
 
-# 2. Copy ไฟล์ทั้งหมดจาก zip นี้เข้าไป
-
-# 3. Install dependencies
+# 2. Install dependencies
 npm install
 
-# 4. API key
+# 3. API key
 cp .env.local.example .env.local
 # แก้ GOOGLE_AI_API_KEY จาก https://aistudio.google.com/apikey
 
-# 5. Run
+# 4. Run
 npm run dev
 ```
 

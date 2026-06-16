@@ -1,7 +1,9 @@
-# Accidental root-level installs / nested clones
 /node_modules/
-/package.json
-/package-lock.json
-/MeepoBGN/
-
+/.next/
+/out/
+.env*.local
 .DS_Store
+*.tsbuildinfo
+next-env.d.ts
+/MeepoBGN/
+/mvp/
