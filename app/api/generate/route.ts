@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_STYLE_PROMPT, VISION_PROMPT } from "@/lib/meepo-sticker-prompt";
+import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplateId } from "@/lib/meepo-templates";
 
 function getGenai() {
   const apiKey = process.env.GOOGLE_AI_API_KEY?.trim();
@@ -30,7 +31,7 @@ function parseApiError(err: unknown): string {
 export async function POST(req: NextRequest) {
   try {
     const genai = getGenai();
-    const { imageBase64, imageMimeType, stylePrompt } = await req.json();
+    const { imageBase64, imageMimeType, stylePrompt, templateId } = await req.json();
 
     if (!imageBase64 || !imageMimeType) {
       return NextResponse.json({ error: "Missing image data" }, { status: 400 });
@@ -38,6 +39,9 @@ export async function POST(req: NextRequest) {
 
     const model = "imagen-4.0-fast-generate-001";
     const style = stylePrompt ?? DEFAULT_STYLE_PROMPT;
+    const template = getTemplate(
+      templateId === "animal" || templateId === "human" ? templateId : DEFAULT_TEMPLATE,
+    );
 
     const visionRes = await genai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
         role: "user",
         parts: [
           { inlineData: { data: imageBase64, mimeType: imageMimeType } },
-          { text: VISION_PROMPT(style) },
+          { text: VISION_PROMPT(style, template.shapePrompt) },
         ],
       }],
     });
