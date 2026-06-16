@@ -27,11 +27,11 @@ export function TemplatePicker({ value, onChange, disabled }: TemplatePickerProp
   const templates = Object.values(MEEPO_TEMPLATES);
 
   return (
-    <div className="bg-bgn-surface rounded-2xl p-3 shadow-sm border border-bgn-border">
-      <p className="text-[11px] font-extrabold text-bgn-muted text-center mb-2 tracking-wide">
+    <div className="bg-bgn-surface rounded-3xl p-4 shadow-md">
+      <p className="text-sm font-extrabold text-bgn-ink text-center mb-3">
         เลือกแบบหัว Meepo
       </p>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         {templates.map((t) => {
           const active = value === t.id;
           return (
@@ -40,17 +40,17 @@ export function TemplatePicker({ value, onChange, disabled }: TemplatePickerProp
               type="button"
               disabled={disabled}
               onClick={() => onChange(t.id)}
-              className={`rounded-xl py-2.5 px-2 border-2 transition-all text-center
+              className={`rounded-2xl py-3 px-2 border-2 transition-all text-center
                 ${active
-                  ? "border-bgn-primary-hover bg-bgn-primary-soft shadow-sm"
+                  ? "border-bgn-primary-hover bg-bgn-primary-soft"
                   : "border-bgn-border bg-white hover:border-bgn-primary/50"}
                 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             >
               <TemplateSilhouette template={t} active={active} />
-              <div className={`text-[13px] font-extrabold mt-1 ${active ? "text-bgn-primary-hover" : "text-bgn-ink"}`}>
+              <div className={`text-base font-extrabold mt-1.5 ${active ? "text-bgn-primary-hover" : "text-bgn-ink"}`}>
                 {t.label}
               </div>
-              <div className="text-[10px] text-bgn-muted font-semibold">{t.description}</div>
+              <div className="text-xs text-bgn-muted font-semibold mt-0.5">{t.description}</div>
             </button>
           );
         })}

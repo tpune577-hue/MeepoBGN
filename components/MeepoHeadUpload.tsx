@@ -64,15 +64,15 @@ export function MeepoHeadUpload({
       </svg>
 
       {!photo && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 pointer-events-none pt-5">
-          <MeepoMascot size={40} />
-          <span className="text-[11px] font-extrabold text-bgn-ink leading-tight">อัปโหลดรูปหน้า</span>
-          <span className="text-[9px] text-bgn-muted font-semibold">แตะหรือลากรูป</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none pt-5">
+          <MeepoMascot size={44} />
+          <span className="text-[15px] font-extrabold text-bgn-ink leading-tight">อัปโหลดรูปหน้า</span>
+          <span className="text-xs text-bgn-muted font-semibold">แตะหรือลากรูป</span>
         </div>
       )}
 
       {photo && (
-        <span className="absolute bottom-1 right-1 bg-bgn-ink/75 text-white text-[10px] font-bold px-2 py-0.5 rounded-md pointer-events-none">
+        <span className="absolute bottom-1 right-1 bg-bgn-ink/75 text-white text-xs font-bold px-2.5 py-1 rounded-lg pointer-events-none">
           เปลี่ยนรูป
         </span>
       )}
