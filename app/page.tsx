@@ -10,6 +10,26 @@ import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplateId } from "@/lib/meepo-temp
 
 type Step = "idle" | "analyzing" | "generating" | "done" | "error";
 
+async function compressImage(
+  base64: string,
+  mimeType: string,
+): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const MAX = 1024;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+    };
+    img.src = `data:${mimeType};base64,${base64}`;
+  });
+}
+
 interface Result {
   imageBase64: string;
   mimeType: string;
@@ -64,22 +84,29 @@ export default function Page() {
     try {
       setStep("generating");
 
+      const { base64: compressedB64, mimeType: compressedMime } = await compressImage(photoB64, photoMime);
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: photoB64,
-          imageMimeType: photoMime,
+          imageBase64: compressedB64,
+          imageMimeType: compressedMime,
           templateId,
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error ?? "Server error");
+      let data: Record<string, unknown>;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("เซิร์ฟเวอร์ปฏิเสธคำขอ — รูปภาพอาจใหญ่เกินไป ลองใช้รูปที่เล็กกว่านี้");
+      }
+      if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
       setResult({
-        imageBase64: data.imageBase64,
-        mimeType: data.mimeType ?? "image/png",
+        imageBase64: data.imageBase64 as string,
+        mimeType: (data.mimeType as string) ?? "image/png",
       });
       setStep("done");
     } catch (e: unknown) {
