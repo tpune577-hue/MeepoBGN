@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { MeepoMascot } from "../components/MeepoMascot";
 import { SakuraDecor } from "../components/SakuraDecor";
 import { TemplatePicker } from "../components/TemplatePicker";
@@ -106,11 +107,22 @@ export default function Page() {
       <div className="relative z-10 max-w-[460px] mx-auto flex flex-col gap-5">
         {/* Header */}
         <header className="text-center pt-3 pb-1">
-          <div className="flex justify-center mb-3">
-            <MeepoMascot size={96} variant="badge" animated={isLoading} />
+          <div className={`flex justify-center items-end gap-1 mb-3 ${isLoading ? "animate-meeple-bob" : ""}`}>
+            {(["women", "thief", "death-knight", "wizard", "lizardman"] as const).map((name) => (
+              <Image
+                key={name}
+                src={`/meeples/${name}.png`}
+                alt=""
+                width={78}
+                height={43}
+                className="object-contain"
+                style={{ width: 78, height: 43 }}
+                aria-hidden
+              />
+            ))}
           </div>
           <h1 className="text-[32px] font-black text-bgn-on-bg leading-none text-balance tracking-tight">
-            Create your Meepo
+            DIY My Meeple
           </h1>
           <p className="text-base font-bold text-bgn-muted-on-bg mt-2 tracking-wide">
             By BGN
@@ -162,7 +174,7 @@ export default function Page() {
             ? "กำลังวิเคราะห์ใบหน้า..."
             : step === "generating"
               ? "กำลังสร้าง Meepo..."
-              : "สร้าง Meepo Sticker"}
+              : "สร้าง Meeple Sticker"}
         </button>
 
         {/* Progress */}
