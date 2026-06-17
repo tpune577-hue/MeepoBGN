@@ -1,19 +1,28 @@
 import { MeepoTemplate, MeepoTemplateId, MEEPO_TEMPLATES } from "@/lib/meepo-templates";
 
 function TemplateSilhouette({ template, active }: { template: MeepoTemplate; active: boolean }) {
+  const maskStyle: React.CSSProperties = {
+    WebkitMaskImage: `url(${template.maskSrc})`,
+    maskImage: `url(${template.maskSrc})`,
+    WebkitMaskRepeat: "no-repeat",
+    maskRepeat: "no-repeat",
+    WebkitMaskSize: "contain",
+    maskSize: "contain",
+    WebkitMaskPosition: "center",
+    maskPosition: "center",
+    backgroundColor: active ? "var(--bgn-primary-hover)" : "var(--bgn-primary-soft)",
+  };
+
   return (
-    <svg
-      viewBox={template.viewBox}
-      className="w-16 h-16 mx-auto"
-      aria-hidden
-    >
-      <path
-        d={template.outlinePath}
-        fill={active ? "var(--bgn-primary-hover)" : "var(--bgn-primary-soft)"}
-        stroke={active ? "white" : "var(--bgn-border)"}
-        strokeWidth="2"
+    <div className="relative w-20 h-16 mx-auto" aria-hidden>
+      <div className="absolute inset-0" style={maskStyle} />
+      <img
+        src={template.frameSrc}
+        alt=""
+        className="absolute inset-0 w-full h-full object-contain"
+        draggable={false}
       />
-    </svg>
+    </div>
   );
 }
 
