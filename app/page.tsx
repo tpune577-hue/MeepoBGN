@@ -248,12 +248,33 @@ export default function Page() {
               </span>
             </div>
             <div className="inline-block bg-white rounded-2xl p-3 shadow-sm ring-1 ring-bgn-border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`data:${result.mimeType};base64,${result.imageBase64}`}
-                alt="meepo sticker"
-                className="w-full max-w-[260px] rounded-xl block"
-              />
+              <div
+                className="relative mx-auto"
+                style={{ width: "260px", aspectRatio: template.aspect }}
+              >
+                {/* Generated image clipped to the selected meeple template shape */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{
+                    WebkitMaskImage: `url(${template.maskSrc})`,
+                    maskImage: `url(${template.maskSrc})`,
+                    WebkitMaskRepeat: "no-repeat",
+                    maskRepeat: "no-repeat",
+                    WebkitMaskSize: "100% 100%",
+                    maskSize: "100% 100%",
+                    backgroundImage: `url(data:${result.mimeType};base64,${result.imageBase64})`,
+                  }}
+                />
+                {/* Template frame outline on top */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={template.frameSrc}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 w-full h-full pointer-events-none select-none"
+                  draggable={false}
+                />
+              </div>
             </div>
             <div className="flex gap-3 mt-5 justify-center">
               <button
