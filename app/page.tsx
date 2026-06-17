@@ -108,15 +108,15 @@ export default function Page() {
         {/* Header */}
         <header className="text-center pt-3 pb-1">
           <div className={`flex justify-center items-end gap-1 mb-3 ${isLoading ? "animate-meeple-bob" : ""}`}>
-            {(["women", "thief", "death-knight", "wizard", "lizardman"] as const).map((name) => (
+            {(["char1", "char2", "char3", "char4", "char5", "char6"] as const).map((name) => (
               <Image
                 key={name}
                 src={`/meeples/${name}.png`}
                 alt=""
-                width={78}
-                height={43}
+                width={64}
+                height={64}
                 className="object-contain"
-                style={{ width: 78, height: 43 }}
+                style={{ width: 64, height: 64 }}
                 aria-hidden
               />
             ))}
