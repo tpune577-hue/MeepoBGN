@@ -36,7 +36,7 @@ export function TemplatePicker({ value, onChange, disabled }: TemplatePickerProp
   const templates = Object.values(MEEPO_TEMPLATES);
 
   return (
-    <div className="bg-bgn-surface rounded-3xl p-4 shadow-md">
+    <div className="bg-white rounded-3xl p-4 shadow-md ring-1 ring-bgn-border">
       <p className="text-sm font-extrabold text-bgn-ink text-center mb-3">
         เลือกแบบหัว Meepo
       </p>

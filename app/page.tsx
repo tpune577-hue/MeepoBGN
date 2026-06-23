@@ -128,12 +128,12 @@ export default function Page() {
   const template = getTemplate(templateId);
 
   return (
-    <main className="min-h-screen bg-bgn-bg text-bgn-on-bg font-nunito px-4 py-8 pb-16 relative overflow-hidden">
+    <main className="min-h-screen bg-white text-bgn-ink font-nunito px-4 py-0 pb-16 relative overflow-hidden">
       <SakuraDecor />
 
       <div className="relative z-10 max-w-[460px] mx-auto flex flex-col gap-5">
-        {/* Header */}
-        <header className="text-center pt-3 pb-1">
+        {/* Header — aqua accent band (~40% visual weight) */}
+        <header className="text-center -mx-4 px-4 pt-8 pb-7 bg-bgn-primary text-bgn-on-bg rounded-b-[2rem] shadow-sm">
           <div className={`flex justify-center items-end gap-1 mb-3 ${isLoading ? "animate-meeple-bob" : ""}`}>
             {(["char1", "char2", "char3", "char4", "char5", "char6"] as const).map((name) => (
               <Image
@@ -156,6 +156,7 @@ export default function Page() {
           </p>
         </header>
 
+        <div className="flex flex-col gap-5 pt-1">
         <TemplatePicker
           value={templateId}
           onChange={setTemplateId}
@@ -193,8 +194,8 @@ export default function Page() {
           className={`w-full py-4 rounded-2xl font-extrabold text-[17px] tracking-wide transition-all duration-200 border-none
             ${
               !photo || isLoading
-                ? "bg-white/40 text-bgn-muted-on-bg cursor-not-allowed"
-                : "bg-bgn-surface text-bgn-primary-hover cursor-pointer hover:bg-white active:scale-[0.98] animate-pulse-soft shadow-md"
+                ? "bg-bgn-primary-soft text-bgn-muted cursor-not-allowed"
+                : "bg-bgn-primary text-bgn-on-bg cursor-pointer hover:bg-bgn-primary-hover active:scale-[0.98] animate-pulse-soft shadow-md"
             }`}
         >
           {step === "analyzing"
@@ -214,12 +215,12 @@ export default function Page() {
                 <div key={i} className="flex items-center gap-2.5">
                   {i > 0 && (
                     <div
-                      className={`w-6 h-0.5 rounded-full transition-colors ${done || active ? "bg-white/80" : "bg-white/30"}`}
+                      className={`w-6 h-0.5 rounded-full transition-colors ${done || active ? "bg-bgn-primary" : "bg-bgn-border"}`}
                     />
                   )}
                   <span
                     className={`text-sm font-extrabold transition-colors ${
-                      done || active ? "text-bgn-on-bg" : "text-white/45"
+                      done || active ? "text-bgn-primary" : "text-bgn-muted"
                     }`}
                   >
                     {label}
@@ -231,7 +232,7 @@ export default function Page() {
         )}
 
         {step === "generating" && (
-          <p className="text-center text-sm text-bgn-muted-on-bg font-semibold animate-fade-up">
+          <p className="text-center text-sm text-bgn-muted font-semibold animate-fade-up">
             อาจใช้เวลา 30–60 วินาที
           </p>
         )}
@@ -239,7 +240,7 @@ export default function Page() {
         {step === "done" && result && (
           <div
             ref={resultRef}
-            className="scroll-mt-6 bg-bgn-surface rounded-3xl p-6 text-center animate-pop-in shadow-md"
+            className="scroll-mt-6 bg-bgn-primary-soft rounded-3xl p-6 text-center animate-pop-in shadow-md ring-1 ring-bgn-border"
           >
             <div className="flex items-center justify-center gap-2 mb-4">
               <MeepoMascot size={28} />
@@ -258,13 +259,13 @@ export default function Page() {
             <div className="flex gap-3 mt-5 justify-center">
               <button
                 onClick={generate}
-                className="px-5 py-3 bg-bgn-primary-soft rounded-xl text-bgn-ink font-bold text-[15px] cursor-pointer hover:bg-bgn-primary-soft/70 transition-colors"
+                className="px-5 py-3 bg-white rounded-xl text-bgn-ink font-bold text-[15px] cursor-pointer hover:bg-bgn-primary-soft transition-colors ring-1 ring-bgn-border"
               >
                 สร้างใหม่
               </button>
               <button
                 onClick={download}
-                className="px-5 py-3 bg-bgn-primary-hover rounded-xl text-white font-bold text-[15px] cursor-pointer hover:bg-bgn-primary transition-colors"
+                className="px-5 py-3 bg-bgn-primary rounded-xl text-bgn-on-bg font-bold text-[15px] cursor-pointer hover:bg-bgn-primary-hover transition-colors"
               >
                 บันทึก PNG
               </button>
@@ -284,9 +285,10 @@ export default function Page() {
           </div>
         )}
 
-        <footer className="text-center text-xs text-bgn-muted-on-bg/80 font-bold tracking-wide pt-3">
+        <footer className="text-center text-xs text-bgn-muted font-bold tracking-wide pt-3">
           powered by Sandory Box
         </footer>
+        </div>
       </div>
     </main>
   );

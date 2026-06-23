@@ -6,19 +6,19 @@
   :root {
     --font-nunito: "Nunito", sans-serif;
 
-    --bgn-bg: oklch(0.76 0.14 5);
-    --bgn-surface: oklch(1 0 0);
-    --bgn-ink: oklch(0.35 0.08 355);
-    --bgn-muted: oklch(0.52 0.06 355);
-    --bgn-on-bg: oklch(1 0 0);
-    --bgn-muted-on-bg: oklch(0.97 0.02 5);
-    --bgn-primary: oklch(0.76 0.14 5);
-    --bgn-primary-hover: oklch(0.68 0.16 5);
-    --bgn-primary-soft: oklch(0.97 0.03 5);
-    --bgn-accent: oklch(0.82 0.11 5);
-    --bgn-border: oklch(0.92 0.03 5);
-    --bgn-blossom: oklch(0.97 0.03 5);
-    --bgn-blossom-core: oklch(0.90 0.05 5);
+    --bgn-bg: #ffffff;
+    --bgn-surface: #ffffff;
+    --bgn-ink: #5b656f;
+    --bgn-muted: #8a9399;
+    --bgn-on-bg: #ffffff;
+    --bgn-muted-on-bg: rgba(255, 255, 255, 0.85);
+    --bgn-primary: #00c5e1;
+    --bgn-primary-hover: #00adc6;
+    --bgn-primary-soft: #e6f9fc;
+    --bgn-accent: #4dd4e8;
+    --bgn-border: #d4eef3;
+    --bgn-blossom: #b8edf5;
+    --bgn-blossom-core: #7ddce9;
     --bgn-error: oklch(0.55 0.20 25);
     --bgn-error-bg: oklch(0.96 0.03 25);
     --bgn-success: oklch(0.52 0.14 155);
@@ -51,8 +51,8 @@
 }
 
 @keyframes pulseSoft {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(1 0 0 / 0.45); }
-  70% { box-shadow: 0 0 0 10px oklch(1 0 0 / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(0 197 225 / 0.45); }
+  70% { box-shadow: 0 0 0 10px rgb(0 197 225 / 0); }
 }
 
 .animate-meeple-bob { animation: meepleBob 2.4s ease-in-out infinite; }

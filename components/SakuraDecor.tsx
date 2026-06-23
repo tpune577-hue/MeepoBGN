@@ -43,7 +43,7 @@ export function SakuraDecor() {
           <Blossom size={b.size} />
         </div>
       ))}
-      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[oklch(0.68_0.16_5/0.25)] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#00c5e1/0.2] to-transparent" />
     </div>
   );
 }
