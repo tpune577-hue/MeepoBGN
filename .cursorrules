@@ -2,18 +2,20 @@
 
 ## Project
 Chibi Head Sticker Generator สำหรับสร้าง sticker ติด Meepo figure
-- อัพโหลดรูปหน้า → Gemini วิเคราะห์ → Imagen 4 gen "เฉพาะหน้า" → composite แปะลง template หัวที่ fix
+- อัพโหลดรูปหน้า → Gemini image-edit วาดคนลงบนโครงหัว BGN ที่ fix → client ตัดเป็น die-cut sticker
 
 ## Flow สำคัญ (ห้ามหลุดจากแบบ)
-- หัว = FIXED template (mask + frame ใน public/templates/) ห้ามให้โมเดลวาดทรงหัวเอง
-- Gemini gen prompt เฉพาะ "เนื้อหาใบหน้า" ที่เติมเต็มทรง → Imagen gen (4:3) → client composite (clip mask + วาง frame ทับ)
+- โครงหัว/หู/สไตล์ = FIXED reference (public/refs/bgn-head-ref.png) ส่งเป็น image 1 ห้ามให้โมเดลคิดทรง/หูเอง
+- ส่ง [instruction(จาก SKILL.md) + ref + รูปผู้ใช้] เข้า gemini-2.5-flash-image (responseModalities: ["IMAGE"]) → คืนหัว BGN ที่เหมือนคนในรูป
+- client makeDieCut(): flood-fill ลบพื้นขาว + dilate ทำขอบขาว die-cut → PNG โปร่งใส
+- templateId: human = หูกลมข้าง, animal = เพิ่มหูสัตว์บนหัว (คุมผ่าน prompt)
 - สเปคล็อกอยู่ที่ skills/meepo-head-sticker/SKILL.md — route.ts อ่านไฟล์นี้ส่งเข้า Gemini ทุก request
 
 ## Stack
 - Next.js 14 App Router (ไม่ใช้ pages/)
 - TypeScript strict mode
 - Tailwind CSS
-- @google/genai SDK (Gemini 2.5 Flash + Imagen 4)
+- @google/genai SDK (gemini-2.5-flash-image / nano-banana)
 
 ## Structure
 ```
@@ -28,9 +30,9 @@ app/
 
 ## API Contract
 POST /api/generate
-  body: { imageBase64, imageMimeType, stylePrompt?, templateId }
-  returns: { features, imageBase64, mimeType, prompt, templateId } | { error }
-  หมายเหตุ: imageBase64 ที่คืนมาคือ "ภาพหน้าดิบ" — client เอาไป composite ลง template เอง
+  body: { imageBase64, imageMimeType, templateId }
+  returns: { imageBase64, mimeType, templateId } | { error }
+  หมายเหตุ: imageBase64 ที่คืนมาคือ "หัว BGN บนพื้นขาว" — client เอาไป makeDieCut() ตัดเป็นสติกเกอร์โปร่งใส
 
 ## Key Rules
 - GOOGLE_AI_API_KEY อยู่ฝั่ง server เท่านั้น (route.ts) ห้ามส่งไป client เด็ดขาด
@@ -39,17 +41,10 @@ POST /api/generate
 - Tailwind-first สำหรับ styling, inline style เฉพาะ dynamic values
 - Component เล็กๆ แยกไว้ที่ components/ ถ้าใช้หลายที่
 
-## Models (Imagen 4)
-- imagen-4.0-fast-generate-001    → $0.02/img (default)
-- imagen-4.0-generate-001         → $0.04/img
-- imagen-4.0-ultra-generate-001   → $0.06/img
-
-## Vision Model
-- gemini-2.5-flash → วิเคราะห์หน้าก่อน gen prompt
+## Model
+- gemini-2.5-flash-image (nano-banana) → image-edit: วาดคนลงบนโครงหัว BGN ที่ fix
 
 ## What's NOT here yet (MVP gaps to fill)
-- [ ] Loading skeleton / progress animation ที่ดีขึ้น
+- [ ] reference โครงหัวแบบ animal แยก (ตอนนี้ human ref + prompt เพิ่มหูสัตว์)
 - [ ] Sticker history (localStorage หรือ Supabase ถ้าขยาย)
-- [ ] Background removal จาก sticker output
-- [ ] Vercel deployment config
 - [ ] Rate limiting บน API route
