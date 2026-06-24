@@ -146,6 +146,7 @@ export default function Page() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [templateId, setTemplateId] = useState<MeepoTemplateId>(DEFAULT_TEMPLATE);
+  const [useV2, setUseV2] = useState(false); // prototype A: Gemini image-edit with fixed BGN head ref
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -187,7 +188,7 @@ export default function Page() {
 
       const { base64: compressedB64, mimeType: compressedMime } = await compressImage(photoB64, photoMime);
 
-      const res = await fetch("/api/generate", {
+      const res = await fetch(useV2 ? "/api/generate-v2" : "/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,22 +206,29 @@ export default function Page() {
       }
       if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
-      // Paste the generated face into the FIXED head template (shape + size locked).
-      const tpl = getTemplate(templateId);
-      const composited = await compositeOntoTemplate(
-        data.imageBase64 as string,
-        (data.mimeType as string) ?? "image/png",
-        tpl.maskSrc,
-        tpl.frameSrc,
-      );
-
-      setResult({ imageBase64: composited.base64, mimeType: composited.mimeType });
+      if (useV2) {
+        // Prototype A returns a full BGN head (ears + style baked in). Show as-is.
+        setResult({
+          imageBase64: data.imageBase64 as string,
+          mimeType: (data.mimeType as string) ?? "image/png",
+        });
+      } else {
+        // Paste the generated face into the FIXED head template (shape + size locked).
+        const tpl = getTemplate(templateId);
+        const composited = await compositeOntoTemplate(
+          data.imageBase64 as string,
+          (data.mimeType as string) ?? "image/png",
+          tpl.maskSrc,
+          tpl.frameSrc,
+        );
+        setResult({ imageBase64: composited.base64, mimeType: composited.mimeType });
+      }
       setStep("done");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
     }
-  }, [photoB64, photoMime, templateId, step]);
+  }, [photoB64, photoMime, templateId, step, useV2]);
 
   const download = useCallback(() => {
     if (!result) return;
@@ -269,6 +277,25 @@ export default function Page() {
           onChange={setTemplateId}
           disabled={isLoading}
         />
+
+        {/* Prototype A toggle — Gemini image-edit with fixed BGN head (ears + style) */}
+        <label
+          className={`flex items-center justify-between gap-3 bg-white rounded-2xl px-4 py-3 ring-1 ring-bgn-border ${isLoading ? "opacity-50" : "cursor-pointer"}`}
+        >
+          <span className="text-sm font-extrabold text-bgn-ink leading-tight">
+            ทดลอง: หู + โครงหน้าสไตล์ BGN
+            <span className="block text-xs font-semibold text-bgn-muted">
+              ใช้ Gemini วาดลงโครงหัวที่ fix ไว้ (v2)
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={useV2}
+            disabled={isLoading}
+            onChange={(e) => setUseV2(e.target.checked)}
+            className="w-5 h-5 accent-bgn-primary cursor-pointer"
+          />
+        </label>
 
         <MeepoHeadUpload
           template={template}
