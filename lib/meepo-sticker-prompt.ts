@@ -1,16 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-
-/** Default style suffix appended to every Imagen prompt (UI style config is hidden). */
-export const DEFAULT_STYLE_PROMPT = "";
-
-/** Locked Imagen aspect ratio — closest supported ratio to both head templates. */
-export const LOCKED_ASPECT_RATIO = "4:3";
+import { MeepoTemplateId } from "@/lib/meepo-templates";
 
 /**
- * The Meepo head-sticker spec lives in skills/meepo-head-sticker/SKILL.md and is
- * the single source of truth for generation. We load it at request time and feed
- * it to Gemini so output never drifts off-template. Cached after first read.
+ * The Meepo head-sticker spec lives in skills/meepo-head-sticker/SKILL.md and is the
+ * single source of truth for generation. We load it at request time and feed it to the
+ * Gemini image-edit model so output never drifts off-template. Cached after first read.
  */
 let skillCache: string | null = null;
 export function loadSkill(): string {
@@ -20,28 +15,28 @@ export function loadSkill(): string {
   return skillCache;
 }
 
-export const VISION_PROMPT = (
-  skill: string,
-  stylePrompt: string,
-  headSilhouettePrompt: string,
-) => `
-You are the Meepo head-sticker art director. Follow the locked spec below EXACTLY.
-The spec wins over any habit or assumption. The head outline/silhouette is FIXED by
-a template asset and is added later by code — so you must describe ONLY the inner
-face content that fills the template, never the outline, ears, die-cut edge, notch
-tabs, or background scenery.
+/** The locked BGN head reference image (image 1 in the edit request). */
+let refCache: string | null = null;
+export function loadHeadRef(): string {
+  if (refCache) return refCache;
+  const p = path.join(process.cwd(), "public", "refs", "bgn-head-ref.png");
+  refCache = fs.readFileSync(p).toString("base64");
+  return refCache;
+}
 
-===== LOCKED SPEC (skills/meepo-head-sticker/SKILL.md) =====
-${skill}
-===== END SPEC =====
+const EAR_CLAUSE: Record<MeepoTemplateId, string> = {
+  human: "Ear style: keep the simple round human ears from the reference on both sides.",
+  animal:
+    "Ear style: in addition to the small round side ears, add two cute rounded animal ears on top of the head, drawn in the same BGN line and flat-shading style.",
+};
 
-The user picked this fixed head template. Make the face FILL this silhouette so it
-covers the shape after clipping (but do NOT draw the outline yourself):
-${headSilhouettePrompt}
+/** Build the full edit instruction: the locked spec + the chosen ear variant. */
+export function buildEditInstruction(skill: string, templateId: MeepoTemplateId): string {
+  return `${skill}
 
-Now analyze the FACE in the attached photo and produce the JSON contract defined in
-the spec: a 1-sentence "features" description and a single-line inner-face "prompt"
-built from the locked Imagen prompt structure.${stylePrompt ? `\nAppend this style to the prompt: ${stylePrompt}` : ""}
-
-Return ONLY valid JSON, no markdown fences.
-`.trim();
+=== THIS REQUEST ===
+${EAR_CLAUSE[templateId]}
+Follow the locked spec above exactly. Image 1 is the fixed BGN head reference. Image 2
+is the person to redraw. Output ONLY the head + small neck on a plain pure-white
+background, ears clearly visible, no body, no text, no border.`;
+}

@@ -40,93 +40,74 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Find the bounding box of the actual drawn content, ignoring the plain white /
- * transparent margins Imagen leaves around the head. Returns the full image box if
- * nothing is found. This is what makes the head fill the template instead of
- * floating in a white blob.
+ * Turn the generated head (BGN head on a plain white background) into a die-cut
+ * sticker: remove the white background and add a clean white sticker border.
+ * Returns a transparent PNG.
  */
-function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
-  const c = document.createElement("canvas");
-  c.width = iw;
-  c.height = ih;
-  const cx = c.getContext("2d", { willReadFrequently: true })!;
-  cx.drawImage(img, 0, 0);
-  const { data } = cx.getImageData(0, 0, iw, ih);
-
-  let minX = iw, minY = ih, maxX = -1, maxY = -1;
-  for (let y = 0; y < ih; y++) {
-    for (let x = 0; x < iw; x++) {
-      const i = (y * iw + x) * 4;
-      const a = data[i + 3];
-      const isBg = a < 16 || (data[i] > 244 && data[i + 1] > 244 && data[i + 2] > 244);
-      if (isBg) continue;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-  }
-  if (maxX < minX || maxY < minY) return { sx: 0, sy: 0, sw: iw, sh: ih };
-
-  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.01);
-  minX = Math.max(0, minX - pad);
-  minY = Math.max(0, minY - pad);
-  maxX = Math.min(iw - 1, maxX + pad);
-  maxY = Math.min(ih - 1, maxY + pad);
-  return { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 };
-}
-
-/**
- * Paste the AI-generated inner face into the FIXED head template.
- * The mask clips the face to the exact locked silhouette and the frame draws the
- * locked outline on top — so the head shape + size are identical on every sticker.
- */
-async function compositeOntoTemplate(
+async function makeDieCut(
   generatedBase64: string,
   generatedMime: string,
-  maskSrc: string,
-  frameSrc: string,
 ): Promise<{ base64: string; mimeType: string }> {
-  const SCALE = 4; // upscale the locked template px for print-ready output
-  const [face, mask, frame] = await Promise.all([
-    loadImage(`data:${generatedMime};base64,${generatedBase64}`),
-    loadImage(maskSrc),
-    loadImage(frameSrc),
-  ]);
+  const img = await loadImage(`data:${generatedMime};base64,${generatedBase64}`);
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  const border = Math.max(8, Math.round(Math.max(iw, ih) * 0.02)); // white die-cut border
+  const pad = border + 4;
 
-  const w = mask.naturalWidth * SCALE;
-  const h = mask.naturalHeight * SCALE;
+  // 1) draw the head and flood-fill the near-white background away from the borders
+  //    (keeps interior whites like eye highlights and teeth).
+  const head = document.createElement("canvas");
+  head.width = iw;
+  head.height = ih;
+  const hctx = head.getContext("2d", { willReadFrequently: true })!;
+  hctx.drawImage(img, 0, 0);
+  const imgData = hctx.getImageData(0, 0, iw, ih);
+  const d = imgData.data;
+  const N = iw * ih;
+  const seen = new Uint8Array(N);
+  const stack: number[] = [];
+  const isWhite = (p: number) => d[p * 4] > 238 && d[p * 4 + 1] > 238 && d[p * 4 + 2] > 238;
+  const push = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= iw || y >= ih) return;
+    const p = y * iw + x;
+    if (seen[p]) return;
+    seen[p] = 1;
+    if (!isWhite(p)) return; // stop at the head outline
+    d[p * 4 + 3] = 0; // make background transparent
+    stack.push(p);
+  };
+  for (let x = 0; x < iw; x++) { push(x, 0); push(x, ih - 1); }
+  for (let y = 0; y < ih; y++) { push(0, y); push(iw - 1, y); }
+  while (stack.length) {
+    const p = stack.pop()!;
+    const x = p % iw, y = (p / iw) | 0;
+    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+  }
+  hctx.putImageData(imgData, 0, 0);
+
+  // 2) a solid-white copy of the head silhouette, used for the border
+  const sil = document.createElement("canvas");
+  sil.width = iw;
+  sil.height = ih;
+  const sctx = sil.getContext("2d")!;
+  sctx.drawImage(head, 0, 0);
+  sctx.globalCompositeOperation = "source-in";
+  sctx.fillStyle = "#ffffff";
+  sctx.fillRect(0, 0, iw, ih);
+
+  // 3) dilate the white silhouette around a circle to form an even border, then lay
+  //    the head on top.
   const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = iw + pad * 2;
+  canvas.height = ih + pad * 2;
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
-
-  // 0) clean white base so the silhouette interior always reads as a crisp white
-  //    die-cut card, never a jagged/grey edge if the head doesn't fully cover.
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, w, h);
-
-  // 1) trim the white margin, then scale the head to COVER the template box (with a
-  //    slight zoom so the head reaches the wide bottom corners), bottom-anchored so
-  //    overflow is cropped from the hair and the chin/neck stay.
-  const { sx, sy, sw, sh } = contentBox(face);
-  const cover = Math.max(w / sw, h / sh) * 1.05;
-  const dw = sw * cover;
-  const dh = sh * cover;
-  const dx = (w - dw) / 2; // horizontally centered
-  const dy = h - dh; // bottom-anchored: overflow is cropped from the top (hair)
-  ctx.drawImage(face, sx, sy, sw, sh, dx, dy, dw, dh);
-
-  // 2) clip to the fixed silhouette
-  ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(mask, 0, 0, w, h);
-
-  // 3) lay the fixed outline on top
-  ctx.globalCompositeOperation = "source-over";
-  ctx.drawImage(frame, 0, 0, w, h);
+  const STEPS = 32;
+  for (let i = 0; i < STEPS; i++) {
+    const a = (i / STEPS) * Math.PI * 2;
+    ctx.drawImage(sil, pad + Math.cos(a) * border, pad + Math.sin(a) * border);
+  }
+  ctx.drawImage(head, pad, pad);
 
   return { base64: canvas.toDataURL("image/png").split(",")[1], mimeType: "image/png" };
 }
@@ -146,7 +127,6 @@ export default function Page() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [templateId, setTemplateId] = useState<MeepoTemplateId>(DEFAULT_TEMPLATE);
-  const [useV2, setUseV2] = useState(false); // prototype A: Gemini image-edit with fixed BGN head ref
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -188,7 +168,7 @@ export default function Page() {
 
       const { base64: compressedB64, mimeType: compressedMime } = await compressImage(photoB64, photoMime);
 
-      const res = await fetch(useV2 ? "/api/generate-v2" : "/api/generate", {
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -206,29 +186,19 @@ export default function Page() {
       }
       if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
-      if (useV2) {
-        // Prototype A returns a full BGN head (ears + style baked in). Show as-is.
-        setResult({
-          imageBase64: data.imageBase64 as string,
-          mimeType: (data.mimeType as string) ?? "image/png",
-        });
-      } else {
-        // Paste the generated face into the FIXED head template (shape + size locked).
-        const tpl = getTemplate(templateId);
-        const composited = await compositeOntoTemplate(
-          data.imageBase64 as string,
-          (data.mimeType as string) ?? "image/png",
-          tpl.maskSrc,
-          tpl.frameSrc,
-        );
-        setResult({ imageBase64: composited.base64, mimeType: composited.mimeType });
-      }
+      // The model returns a BGN head (ears + style locked by the reference) on white.
+      // Cut it out as a die-cut sticker.
+      const sticker = await makeDieCut(
+        data.imageBase64 as string,
+        (data.mimeType as string) ?? "image/png",
+      );
+      setResult({ imageBase64: sticker.base64, mimeType: sticker.mimeType });
       setStep("done");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
     }
-  }, [photoB64, photoMime, templateId, step, useV2]);
+  }, [photoB64, photoMime, templateId, step]);
 
   const download = useCallback(() => {
     if (!result) return;
@@ -277,25 +247,6 @@ export default function Page() {
           onChange={setTemplateId}
           disabled={isLoading}
         />
-
-        {/* Prototype A toggle — Gemini image-edit with fixed BGN head (ears + style) */}
-        <label
-          className={`flex items-center justify-between gap-3 bg-white rounded-2xl px-4 py-3 ring-1 ring-bgn-border ${isLoading ? "opacity-50" : "cursor-pointer"}`}
-        >
-          <span className="text-sm font-extrabold text-bgn-ink leading-tight">
-            ทดลอง: หู + โครงหน้าสไตล์ BGN
-            <span className="block text-xs font-semibold text-bgn-muted">
-              ใช้ Gemini วาดลงโครงหัวที่ fix ไว้ (v2)
-            </span>
-          </span>
-          <input
-            type="checkbox"
-            checked={useV2}
-            disabled={isLoading}
-            onChange={(e) => setUseV2(e.target.checked)}
-            className="w-5 h-5 accent-bgn-primary cursor-pointer"
-          />
-        </label>
 
         <MeepoHeadUpload
           template={template}
@@ -382,7 +333,7 @@ export default function Page() {
                 Meepo ของคุณพร้อมแล้ว
               </span>
             </div>
-            <div className="inline-block bg-white rounded-2xl p-3 shadow-sm ring-1 ring-bgn-border">
+            <div className="inline-block bg-[#eef0f3] rounded-2xl p-3 shadow-sm ring-1 ring-bgn-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`data:${result.mimeType};base64,${result.imageBase64}`}
