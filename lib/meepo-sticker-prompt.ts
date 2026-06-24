@@ -30,13 +30,18 @@ const EAR_CLAUSE: Record<MeepoTemplateId, string> = {
     "Ear style: in addition to the small round side ears, add two cute rounded animal ears on top of the head, drawn in the same BGN line and flat-shading style.",
 };
 
-/** Build the full edit instruction: the locked spec + the chosen ear variant. */
-export function buildEditInstruction(skill: string, templateId: MeepoTemplateId): string {
-  return `${skill}
+/**
+ * Extract ONLY the focused model instruction from SKILL.md (between the markers).
+ * Sending the whole markdown spec (frontmatter, diagrams, the die-cut/code steps)
+ * confuses the image model and makes the output drift off-style. Falls back to the
+ * full text only if the markers are missing.
+ */
+function extractModelInstruction(skill: string): string {
+  const m = skill.match(/<!--\s*MODEL_INSTRUCTION_START\s*-->([\s\S]*?)<!--\s*MODEL_INSTRUCTION_END\s*-->/);
+  return (m ? m[1] : skill).trim();
+}
 
-=== THIS REQUEST ===
-${EAR_CLAUSE[templateId]}
-Follow the locked spec above exactly. Image 1 is the fixed BGN head reference. Image 2
-is the person to redraw. Output ONLY the head + small neck on a plain pure-white
-background, ears clearly visible, no body, no text, no border.`;
+/** Build the edit instruction sent to Gemini: focused spec + the chosen ear variant. */
+export function buildEditInstruction(skill: string, templateId: MeepoTemplateId): string {
+  return `${extractModelInstruction(skill)}\n\n${EAR_CLAUSE[templateId]}`;
 }
