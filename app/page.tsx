@@ -30,6 +30,58 @@ async function compressImage(
   });
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/**
+ * Paste the AI-generated inner face into the FIXED head template.
+ * The mask clips the face to the exact locked silhouette and the frame draws the
+ * locked outline on top — so the head shape + size are identical on every sticker.
+ */
+async function compositeOntoTemplate(
+  generatedBase64: string,
+  generatedMime: string,
+  maskSrc: string,
+  frameSrc: string,
+): Promise<{ base64: string; mimeType: string }> {
+  const SCALE = 4; // upscale the locked template px for print-ready output
+  const [face, mask, frame] = await Promise.all([
+    loadImage(`data:${generatedMime};base64,${generatedBase64}`),
+    loadImage(maskSrc),
+    loadImage(frameSrc),
+  ]);
+
+  const w = mask.naturalWidth * SCALE;
+  const h = mask.naturalHeight * SCALE;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+
+  // 1) draw the generated face scaled to COVER the template box (center crop)
+  const cover = Math.max(w / face.naturalWidth, h / face.naturalHeight);
+  const fw = face.naturalWidth * cover;
+  const fh = face.naturalHeight * cover;
+  ctx.drawImage(face, (w - fw) / 2, (h - fh) / 2, fw, fh);
+
+  // 2) clip to the fixed silhouette
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(mask, 0, 0, w, h);
+
+  // 3) lay the fixed outline on top
+  ctx.globalCompositeOperation = "source-over";
+  ctx.drawImage(frame, 0, 0, w, h);
+
+  return { base64: canvas.toDataURL("image/png").split(",")[1], mimeType: "image/png" };
+}
+
 interface Result {
   imageBase64: string;
   mimeType: string;
@@ -104,10 +156,16 @@ export default function Page() {
       }
       if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
-      setResult({
-        imageBase64: data.imageBase64 as string,
-        mimeType: (data.mimeType as string) ?? "image/png",
-      });
+      // Paste the generated face into the FIXED head template (shape + size locked).
+      const tpl = getTemplate(templateId);
+      const composited = await compositeOntoTemplate(
+        data.imageBase64 as string,
+        (data.mimeType as string) ?? "image/png",
+        tpl.maskSrc,
+        tpl.frameSrc,
+      );
+
+      setResult({ imageBase64: composited.base64, mimeType: composited.mimeType });
       setStep("done");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");

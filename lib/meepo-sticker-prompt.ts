@@ -1,30 +1,47 @@
+import fs from "node:fs";
+import path from "node:path";
+
 /** Default style suffix appended to every Imagen prompt (UI style config is hidden). */
 export const DEFAULT_STYLE_PROMPT = "";
 
-export const VISION_PROMPT = (stylePrompt: string, headShapePrompt: string) => `
-You are an anime art director creating chibi Meepo head stickers.
+/** Locked Imagen aspect ratio — closest supported ratio to both head templates. */
+export const LOCKED_ASPECT_RATIO = "4:3";
 
-HEAD TEMPLATE (fixed shape — must match exactly in the final prompt):
-${headShapePrompt}
-
-Analyze the FACE in this photo and extract ONLY these details:
-- Hair: exact color name (e.g. "dark brown", "platinum blonde"), length (short/medium/long), style (wavy/straight/curly/spiky, bangs or no bangs)
-- Eyes: exact color, shape (almond/round/hooded), expression quality in the eyes (bright/tired/sharp/gentle/slight droop)
-- Skin: tone in 1-2 words (e.g. "warm beige", "deep brown", "fair porcelain")
-- Gender appearance: male/female/androgynous
-- 1-2 most distinctive features only (glasses, beard stubble, freckles, dimples, mustache — omit entirely if none)
-
-Then write an image generation prompt for a CHIBI HEAD STICKER — head only, no body.
-
-Use this exact prompt structure (fill in brackets from the photo; include the head template shape; skip the distinctive-features clause if none):
-chibi anime head sticker of [gender] with [hair color] [hair style] hair, [eye color] large expressive eyes with [eye expression quality], [skin tone] skin, [distinctive features if any], [head template shape from above], round oversized chibi head, thick black outline, pure white background, die-cut sticker shape, flat 2D pastel illustration, no body head only, centered, kawaii cute style, clean line art, high quality print-ready sticker art${stylePrompt ? `, ${stylePrompt}` : ""}
-
-Good output example:
-chibi anime head sticker of male with short wavy dark brown hair falling over forehead, large expressive brown eyes with slight droop, warm beige skin, round oversized chibi head, thick black outline, pure white background, die-cut sticker shape, flat 2D pastel illustration, no body head only, centered, kawaii cute style, clean line art, high quality print-ready sticker art
-
-Return ONLY valid JSON (no markdown):
-{
-  "features": "1 sentence face description",
-  "prompt": "the full image generation prompt as one line"
+/**
+ * The Meepo head-sticker spec lives in skills/meepo-head-sticker/SKILL.md and is
+ * the single source of truth for generation. We load it at request time and feed
+ * it to Gemini so output never drifts off-template. Cached after first read.
+ */
+let skillCache: string | null = null;
+export function loadSkill(): string {
+  if (skillCache) return skillCache;
+  const file = path.join(process.cwd(), "skills", "meepo-head-sticker", "SKILL.md");
+  skillCache = fs.readFileSync(file, "utf8");
+  return skillCache;
 }
+
+export const VISION_PROMPT = (
+  skill: string,
+  stylePrompt: string,
+  headSilhouettePrompt: string,
+) => `
+You are the Meepo head-sticker art director. Follow the locked spec below EXACTLY.
+The spec wins over any habit or assumption. The head outline/silhouette is FIXED by
+a template asset and is added later by code — so you must describe ONLY the inner
+face content that fills the template, never the outline, ears, die-cut edge, notch
+tabs, or background scenery.
+
+===== LOCKED SPEC (skills/meepo-head-sticker/SKILL.md) =====
+${skill}
+===== END SPEC =====
+
+The user picked this fixed head template. Make the face FILL this silhouette so it
+covers the shape after clipping (but do NOT draw the outline yourself):
+${headSilhouettePrompt}
+
+Now analyze the FACE in the attached photo and produce the JSON contract defined in
+the spec: a 1-sentence "features" description and a single-line inner-face "prompt"
+built from the locked Imagen prompt structure.${stylePrompt ? `\nAppend this style to the prompt: ${stylePrompt}` : ""}
+
+Return ONLY valid JSON, no markdown fences.
 `.trim();
