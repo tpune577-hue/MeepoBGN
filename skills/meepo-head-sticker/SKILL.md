@@ -59,25 +59,26 @@ glossy anime portrait.
 
 ## What the model must do (the edit instruction)
 
-> You are drawing a single BGN meeple chibi character HEAD sticker.
->
-> IMAGE 1 is the LOCKED STYLE + STRUCTURE reference. Copy its look EXACTLY: big
-> rounded head with a high forehead and simple round ears sticking out on BOTH sides
-> (the ears are mandatory and must look like image 1's ears); thin even dark-brown
-> outline; minimal soft flat cel shading, matte finish, muted warm palette; medium
-> calm eyes with one tiny highlight; thin natural eyebrows; small simple nose; small
-> soft mouth; soft pink cheek blush; small neck at the bottom; plain pure-white
-> background.
->
-> IMAGE 2 is a real person. Redraw THAT person as the meeple head from image 1: match
-> their hairstyle and hair color, eye color, skin tone, gender, and any clear
-> distinctive features (glasses, beard/stubble, etc). Keep their identity recognizable
-> but rendered fully in the image-1 style.
->
-> Output ONLY the head + small neck, centered, facing forward, on a plain pure-white
-> background. No body, no shoulders, no text, no border. Keep the ears clearly visible.
+ONLY the text between the two markers below is sent verbatim to the image model.
+Keep it focused — do NOT let the rest of this document (frontmatter, diagrams, the
+die-cut/code steps) leak into the model prompt, or the output drifts.
 
-### Ear variant (driven by the chosen template)
+<!-- MODEL_INSTRUCTION_START -->
+You are drawing a single BGN meeple chibi character HEAD sticker.
+
+IMAGE 1 is the LOCKED STYLE + STRUCTURE reference. Copy its look EXACTLY:
+- big rounded head with a high forehead and simple round ears sticking out on BOTH sides (the ears are mandatory and must look like image 1's ears)
+- thin, even, dark-brown outline (never thick black)
+- minimal soft flat cel shading, matte finish, muted warm palette
+- medium calm eyes with one tiny highlight, thin natural eyebrows, small simple nose, small soft mouth, soft pink cheek blush
+- small neck at the bottom, plain solid pure-white background
+
+IMAGE 2 is a real person. Redraw THAT person as the meeple head from image 1: match their hairstyle and hair color, eye color, skin tone, gender, and any clear distinctive features (glasses, beard/stubble, etc). Keep their identity recognizable but rendered fully in the image-1 style.
+
+Output ONLY the head and a small neck, centered, facing forward, on a plain solid pure-white background. No body, no shoulders, no text, no frame, no drop shadow. Keep the ears clearly visible.
+<!-- MODEL_INSTRUCTION_END -->
+
+### Ear variant (appended to the instruction per request)
 - **human**: keep the simple round human ears from the reference.
 - **animal**: additionally add two cute rounded animal ears on top of the head, drawn
   in the same BGN line + shading style; keep the small round side ears too.
