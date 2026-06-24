@@ -40,6 +40,45 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
+ * Find the bounding box of the actual drawn content, ignoring the plain white /
+ * transparent margins Imagen leaves around the head. Returns the full image box if
+ * nothing is found. This is what makes the head fill the template instead of
+ * floating in a white blob.
+ */
+function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  const c = document.createElement("canvas");
+  c.width = iw;
+  c.height = ih;
+  const cx = c.getContext("2d", { willReadFrequently: true })!;
+  cx.drawImage(img, 0, 0);
+  const { data } = cx.getImageData(0, 0, iw, ih);
+
+  let minX = iw, minY = ih, maxX = -1, maxY = -1;
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      const i = (y * iw + x) * 4;
+      const a = data[i + 3];
+      const isBg = a < 16 || (data[i] > 244 && data[i + 1] > 244 && data[i + 2] > 244);
+      if (isBg) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < minX || maxY < minY) return { sx: 0, sy: 0, sw: iw, sh: ih };
+
+  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.01);
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(iw - 1, maxX + pad);
+  maxY = Math.min(ih - 1, maxY + pad);
+  return { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 };
+}
+
+/**
  * Paste the AI-generated inner face into the FIXED head template.
  * The mask clips the face to the exact locked silhouette and the frame draws the
  * locked outline on top — so the head shape + size are identical on every sticker.
@@ -65,11 +104,15 @@ async function compositeOntoTemplate(
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
 
-  // 1) draw the generated face scaled to COVER the template box (center crop)
-  const cover = Math.max(w / face.naturalWidth, h / face.naturalHeight);
-  const fw = face.naturalWidth * cover;
-  const fh = face.naturalHeight * cover;
-  ctx.drawImage(face, (w - fw) / 2, (h - fh) / 2, fw, fh);
+  // 1) trim the white margin, then scale the head to COVER the template box so it
+  //    fills the silhouette edge-to-edge (anchored to the bottom to keep the chin).
+  const { sx, sy, sw, sh } = contentBox(face);
+  const cover = Math.max(w / sw, h / sh);
+  const dw = sw * cover;
+  const dh = sh * cover;
+  const dx = (w - dw) / 2; // horizontally centered
+  const dy = h - dh; // bottom-anchored: overflow is cropped from the top (hair)
+  ctx.drawImage(face, sx, sy, sw, sh, dx, dy, dw, dh);
 
   // 2) clip to the fixed silhouette
   ctx.globalCompositeOperation = "destination-in";

@@ -78,19 +78,23 @@ near the bottom corners.
 
 ## Locked Imagen prompt structure (fill the brackets)
 
-> chibi anime portrait of [gender] face with [hair color] [hair style] hair,
-> [eye color] large expressive eyes with [eye expression], [skin tone] skin,
-> [distinctive features if any], round oversized chibi head filling the frame,
-> face and hair centered, flat 2D pastel illustration, soft clean cel shading,
-> thick clean line art on the features, kawaii cute style, front view facing
-> viewer, plain solid pure-white background, no border, no outline frame, no text,
-> head and face only no body, high quality print-ready art
+> extreme close-up chibi anime portrait of [gender] face with [hair color]
+> [hair style] hair, [eye color] large expressive eyes with [eye expression],
+> [skin tone] skin, [distinctive features if any], huge round oversized chibi head
+> that fills the entire frame edge to edge, top of the hair touching the top edge
+> and chin near the bottom edge, face and hair centered, flat 2D pastel
+> illustration, soft clean cel shading, thick clean line art on the features,
+> kawaii cute style, front view facing viewer, plain solid pure-white background,
+> no border, no outline frame, no text, head and face only no body, high quality
+> print-ready art
 
 Hard rules for the generated content:
 - **Background**: plain, solid, pure white only. No scenery, no gradient, no shadow
   bleeding to the edges (the mask clips edges; clean white = clean clip).
-- **Framing**: head + hair centered and large, filling the canvas so it covers the
-  whole silhouette after clipping. No body, shoulders, or neck below the chin.
+- **Framing**: extreme close-up — the head + hair must FILL the whole canvas edge to
+  edge with almost no white margin (the head can be cropped slightly at the very top
+  and sides). A small head floating in white is WRONG. Top of hair near the top edge,
+  chin near the bottom edge. No body, shoulders, or neck below the chin.
 - **Forbidden** in the generated content (these come from the fixed template, never
   from the model): die-cut sticker border, black outline frame around the whole
   head, animal ears as silhouette, notch tabs, drop shadow, white sticker margin.
