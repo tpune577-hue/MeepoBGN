@@ -6,6 +6,7 @@ const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
       "/api/generate": ["./skills/meepo-head-sticker/SKILL.md"],
+      "/api/generate-v2": ["./public/refs/bgn-head-ref.png"],
     },
   },
 };
