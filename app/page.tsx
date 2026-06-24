@@ -104,10 +104,16 @@ async function compositeOntoTemplate(
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
 
-  // 1) trim the white margin, then scale the head to COVER the template box so it
-  //    fills the silhouette edge-to-edge (anchored to the bottom to keep the chin).
+  // 0) clean white base so the silhouette interior always reads as a crisp white
+  //    die-cut card, never a jagged/grey edge if the head doesn't fully cover.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+
+  // 1) trim the white margin, then scale the head to COVER the template box (with a
+  //    slight zoom so the head reaches the wide bottom corners), bottom-anchored so
+  //    overflow is cropped from the hair and the chin/neck stay.
   const { sx, sy, sw, sh } = contentBox(face);
-  const cover = Math.max(w / sw, h / sh);
+  const cover = Math.max(w / sw, h / sh) * 1.05;
   const dw = sw * cover;
   const dh = sh * cover;
   const dx = (w - dw) / 2; // horizontally centered
