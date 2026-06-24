@@ -36,6 +36,9 @@ locked by the reference. This is what stops the output from drifting off-templat
 - `public/refs/bgn-head-ref.png` — the locked BGN head reference (rounded head, simple
   round ears on both sides, thin dark-brown outline, matte flat shading). Image 1 in
   the request.
+- `public/templates/bgn-head-mask.png` — the locked head+ears **silhouette** (derived
+  from the reference). Every output is clipped to this exact shape + size so the sticker
+  always fits the frame. Includes the ears.
 - The uploaded user photo is image 2.
 
 ## Locked art style — BGN meeple (must match the reference family)
@@ -88,9 +91,10 @@ Output ONLY the head and a small neck, centered, facing forward, on a plain soli
 - `responseModalities: ["IMAGE"]`
 - Inputs order: this instruction text, then image 1 (reference), then image 2 (photo).
 
-## Die-cut step (enforced in code, do not skip)
-1. Remove the plain near-white background by flood-fill from the image borders (keeps
-   interior whites like eye highlights and teeth).
-2. Add a clean **white sticker border** by dilating the head silhouette and filling it
-   white behind the head.
-3. Export a transparent PNG. The head keeps the BGN ears + style from the reference.
+## Clip + die-cut step (enforced in code, do not skip)
+1. Trim the plain white margin around the generated head (content bounding box).
+2. Scale it to **cover** the fixed `bgn-head-mask.png` box and **clip** to that
+   silhouette — this locks the head shape + size (with ears) on every sticker.
+3. Add a clean **white die-cut border** + a thin dark outline by dilating the mask
+   silhouette behind the head.
+4. Export a transparent PNG.

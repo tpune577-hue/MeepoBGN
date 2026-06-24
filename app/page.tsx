@@ -39,75 +39,92 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** Locked head+ears silhouette — every sticker is clipped to this exact shape + size. */
+const FIXED_MASK_SRC = "/templates/bgn-head-mask.png";
+const OUT_SCALE = 4; // upscale the locked mask px for print-ready output
+
+/** Bounding box of the actual drawn head, ignoring the plain white margin around it. */
+function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const c = document.createElement("canvas");
+  c.width = iw; c.height = ih;
+  const cx = c.getContext("2d", { willReadFrequently: true })!;
+  cx.drawImage(img, 0, 0);
+  const { data } = cx.getImageData(0, 0, iw, ih);
+  let minX = iw, minY = ih, maxX = -1, maxY = -1;
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      const i = (y * iw + x) * 4;
+      if (data[i + 3] < 16 || (data[i] > 244 && data[i + 1] > 244 && data[i + 2] > 244)) continue;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < minX || maxY < minY) return { sx: 0, sy: 0, sw: iw, sh: ih };
+  return { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 };
+}
+
+/** A solid-color copy of the mask silhouette (used for the die-cut border + outline). */
+function tintSilhouette(mask: HTMLImageElement, w: number, h: number, color: string): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(mask, 0, 0, w, h);
+  ctx.globalCompositeOperation = "source-in";
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, w, h);
+  return c;
+}
+
 /**
- * Turn the generated head (BGN head on a plain white background) into a die-cut
- * sticker: remove the white background and add a clean white sticker border.
- * Returns a transparent PNG.
+ * Clip the generated BGN head into the FIXED head+ears silhouette so every sticker has
+ * the exact same shape + size (fits the frame), then add a white die-cut border and a
+ * thin dark outline. Returns a transparent PNG.
  */
-async function makeDieCut(
+async function compositeFixedTemplate(
   generatedBase64: string,
   generatedMime: string,
 ): Promise<{ base64: string; mimeType: string }> {
-  const img = await loadImage(`data:${generatedMime};base64,${generatedBase64}`);
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
-  const border = Math.max(8, Math.round(Math.max(iw, ih) * 0.02)); // white die-cut border
+  const [img, mask] = await Promise.all([
+    loadImage(`data:${generatedMime};base64,${generatedBase64}`),
+    loadImage(FIXED_MASK_SRC),
+  ]);
+
+  const mw = mask.naturalWidth * OUT_SCALE;
+  const mh = mask.naturalHeight * OUT_SCALE;
+  const border = Math.max(8, Math.round(Math.max(mw, mh) * 0.02));
   const pad = border + 4;
 
-  // 1) draw the head and flood-fill the near-white background away from the borders
-  //    (keeps interior whites like eye highlights and teeth).
-  const head = document.createElement("canvas");
-  head.width = iw;
-  head.height = ih;
-  const hctx = head.getContext("2d", { willReadFrequently: true })!;
-  hctx.drawImage(img, 0, 0);
-  const imgData = hctx.getImageData(0, 0, iw, ih);
-  const d = imgData.data;
-  const N = iw * ih;
-  const seen = new Uint8Array(N);
-  const stack: number[] = [];
-  const isWhite = (p: number) => d[p * 4] > 238 && d[p * 4 + 1] > 238 && d[p * 4 + 2] > 238;
-  const push = (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= iw || y >= ih) return;
-    const p = y * iw + x;
-    if (seen[p]) return;
-    seen[p] = 1;
-    if (!isWhite(p)) return; // stop at the head outline
-    d[p * 4 + 3] = 0; // make background transparent
-    stack.push(p);
-  };
-  for (let x = 0; x < iw; x++) { push(x, 0); push(x, ih - 1); }
-  for (let y = 0; y < ih; y++) { push(0, y); push(iw - 1, y); }
-  while (stack.length) {
-    const p = stack.pop()!;
-    const x = p % iw, y = (p / iw) | 0;
-    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
-  }
-  hctx.putImageData(imgData, 0, 0);
+  // head clipped to the fixed silhouette: trim the white margin, cover-fill the mask
+  // box, then keep only what's inside the silhouette.
+  const layer = document.createElement("canvas");
+  layer.width = mw; layer.height = mh;
+  const lctx = layer.getContext("2d")!;
+  lctx.imageSmoothingQuality = "high";
+  const { sx, sy, sw, sh } = contentBox(img);
+  const cover = Math.max(mw / sw, mh / sh);
+  const dw = sw * cover, dh = sh * cover;
+  lctx.drawImage(img, sx, sy, sw, sh, (mw - dw) / 2, (mh - dh) / 2, dw, dh);
+  lctx.globalCompositeOperation = "destination-in";
+  lctx.drawImage(mask, 0, 0, mw, mh);
 
-  // 2) a solid-white copy of the head silhouette, used for the border
-  const sil = document.createElement("canvas");
-  sil.width = iw;
-  sil.height = ih;
-  const sctx = sil.getContext("2d")!;
-  sctx.drawImage(head, 0, 0);
-  sctx.globalCompositeOperation = "source-in";
-  sctx.fillStyle = "#ffffff";
-  sctx.fillRect(0, 0, iw, ih);
-
-  // 3) dilate the white silhouette around a circle to form an even border, then lay
-  //    the head on top.
+  // assemble: white border + thin dark outline + clipped head
   const canvas = document.createElement("canvas");
-  canvas.width = iw + pad * 2;
-  canvas.height = ih + pad * 2;
+  canvas.width = mw + pad * 2;
+  canvas.height = mh + pad * 2;
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
-  const STEPS = 32;
-  for (let i = 0; i < STEPS; i++) {
-    const a = (i / STEPS) * Math.PI * 2;
-    ctx.drawImage(sil, pad + Math.cos(a) * border, pad + Math.sin(a) * border);
-  }
-  ctx.drawImage(head, pad, pad);
+  const white = tintSilhouette(mask, mw, mh, "#ffffff");
+  const dark = tintSilhouette(mask, mw, mh, "#2b2b2b");
+  const ring = (sil: HTMLCanvasElement, r: number, steps: number) => {
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      ctx.drawImage(sil, pad + Math.cos(a) * r, pad + Math.sin(a) * r);
+    }
+  };
+  ring(white, border, 48); // outer white die-cut border
+  ring(dark, OUT_SCALE * 1.5, 24); // thin dark outline just outside the head
+  ctx.drawImage(layer, pad, pad);
 
   return { base64: canvas.toDataURL("image/png").split(",")[1], mimeType: "image/png" };
 }
@@ -187,8 +204,9 @@ export default function Page() {
       if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
       // The model returns a BGN head (ears + style locked by the reference) on white.
-      // Cut it out as a die-cut sticker.
-      const sticker = await makeDieCut(
+      // Clip it into the FIXED head+ears silhouette so shape + size are identical every
+      // time, then die-cut.
+      const sticker = await compositeFixedTemplate(
         data.imageBase64 as string,
         (data.mimeType as string) ?? "image/png",
       );
