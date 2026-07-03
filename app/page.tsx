@@ -50,7 +50,7 @@ const OUT_SCALE = 4; // upscale the locked mask px for print-ready output
  * unit, so it scales automatically no matter what physical size the template is printed
  * at. The template's own pixel size (mw/mh below) is never changed by this margin.
  */
-const SAFETY_MARGIN_RATIO = 0.12;
+const SAFETY_MARGIN_RATIO = 0.08;
 
 /** Bounding box of the actual drawn head, ignoring the plain white margin around it. */
 function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {

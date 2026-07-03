@@ -107,7 +107,7 @@ production visibly clips the art. There must be a visible **gap of ~0.5 cm** (in
 final printed sticker) between the drawn head/hair and the outer die-cut edge, on
 every side.
 
-- Implemented as `SAFETY_MARGIN_RATIO = 0.12` (12% inset on each side) in
+- Implemented as `SAFETY_MARGIN_RATIO = 0.08` (8% inset on each side) in
   `app/page.tsx`'s `compositeFixedTemplate`, expressed as a **percentage of the fixed
   template box** rather than an absolute unit — this way the gap scales automatically
   regardless of what physical size the sticker is printed at, tuned for the current
