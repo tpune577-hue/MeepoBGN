@@ -43,6 +43,15 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 const FIXED_MASK_SRC = "/templates/bgn-head-mask.png";
 const OUT_SCALE = 4; // upscale the locked mask px for print-ready output
 
+/**
+ * Safety margin between the drawn artwork and the die-cut edge (print bleed tolerance —
+ * printing and cutting are never perfectly aligned, so the art must not touch the cut
+ * line). Expressed as a % of the FIXED template box on each side rather than an absolute
+ * unit, so it scales automatically no matter what physical size the template is printed
+ * at. The template's own pixel size (mw/mh below) is never changed by this margin.
+ */
+const SAFETY_MARGIN_RATIO = 0.12;
+
 /** Bounding box of the actual drawn head, ignoring the plain white margin around it. */
 function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
   const iw = img.naturalWidth, ih = img.naturalHeight;
@@ -95,15 +104,18 @@ async function compositeFixedTemplate(
   const border = Math.max(8, Math.round(Math.max(mw, mh) * 0.02));
   const pad = border + 4;
 
-  // head clipped to the fixed silhouette: trim the white margin, cover-fill the mask
-  // box, then keep only what's inside the silhouette.
+  // head clipped to the fixed silhouette: trim the white margin, fit the art inside a
+  // box inset by the safety margin (leaving a print-bleed gap to the die-cut edge on
+  // every side), then keep only what's inside the silhouette.
   const layer = document.createElement("canvas");
   layer.width = mw; layer.height = mh;
   const lctx = layer.getContext("2d")!;
   lctx.imageSmoothingQuality = "high";
   const { sx, sy, sw, sh } = contentBox(img);
-  const cover = Math.max(mw / sw, mh / sh);
-  const dw = sw * cover, dh = sh * cover;
+  const innerW = mw * (1 - SAFETY_MARGIN_RATIO * 2);
+  const innerH = mh * (1 - SAFETY_MARGIN_RATIO * 2);
+  const contain = Math.min(innerW / sw, innerH / sh);
+  const dw = sw * contain, dh = sh * contain;
   lctx.drawImage(img, sx, sy, sw, sh, (mw - dw) / 2, (mh - dh) / 2, dw, dh);
   lctx.globalCompositeOperation = "destination-in";
   lctx.drawImage(mask, 0, 0, mw, mh);

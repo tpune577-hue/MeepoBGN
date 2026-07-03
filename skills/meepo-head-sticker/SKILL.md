@@ -1,11 +1,11 @@
 ---
 name: meepo-head-sticker
 description: Locked spec for generating BGN Meepo chibi HEAD stickers. A fixed BGN head reference (ears + face structure + art style) is locked; a Gemini image-edit model redraws the uploaded person onto that reference, then the result is cut out as a die-cut sticker. Used by app/api/generate to keep every output on-spec.
-version: 2
+version: 3
 applies_to: gemini-2.5-flash-image (image edit)
 ---
 
-# Meepo Head Sticker — Locked Generation Spec (v2)
+# Meepo Head Sticker — Locked Generation Spec (v3)
 
 Single source of truth for generating Meepo chibi **head** stickers. The API reads
 this file at request time and feeds it to the Gemini image-edit model. If anything
@@ -93,8 +93,27 @@ Output ONLY the head and a small neck, centered, facing forward, on a plain soli
 
 ## Clip + die-cut step (enforced in code, do not skip)
 1. Trim the plain white margin around the generated head (content bounding box).
-2. Scale it to **cover** the fixed `bgn-head-mask.png` box and **clip** to that
-   silhouette — this locks the head shape + size (with ears) on every sticker.
+2. Scale it to **fit inside** the fixed `bgn-head-mask.png` box, inset by the print
+   safety margin (see below), then **clip** to that silhouette — this locks the head
+   shape + size (with ears) on every sticker while leaving a bleed gap to the cut edge.
 3. Add a clean **white die-cut border** + a thin dark outline by dilating the mask
    silhouette behind the head.
 4. Export a transparent PNG.
+
+### Print safety margin (bleed) — locked
+Printing and die-cutting are two separate physical steps and are never perfectly
+aligned, so the artwork must never touch the cut line — if it does, mismatch during
+production visibly clips the art. There must be a visible **gap of ~0.5 cm** (in the
+final printed sticker) between the drawn head/hair and the outer die-cut edge, on
+every side.
+
+- Implemented as `SAFETY_MARGIN_RATIO = 0.12` (12% inset on each side) in
+  `app/page.tsx`'s `compositeFixedTemplate`, expressed as a **percentage of the fixed
+  template box** rather than an absolute unit — this way the gap scales automatically
+  regardless of what physical size the sticker is printed at, tuned for the current
+  ~4 cm print size. If the production print size changes, retune this ratio so the
+  gap still measures ~0.5 cm on the physical sticker.
+- The **template/frame size itself is never changed** — `bgn-head-mask.png`,
+  `human-mask.png` / `human-frame.png`, and `animal-mask.png` / `animal-frame.png` stay
+  at their existing pixel dimensions (fixed to the physical die-cut stencil). Only the
+  artwork drawn *inside* that fixed box is scaled down and centered to create the gap.
