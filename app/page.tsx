@@ -6,28 +6,20 @@ import { MeepoMascot } from "../components/MeepoMascot";
 import { SakuraDecor } from "../components/SakuraDecor";
 import { TemplatePicker } from "../components/TemplatePicker";
 import { MeepoHeadUpload } from "../components/MeepoHeadUpload";
+import { DEFAULT_CROP, CropState, exportTemplateCrop } from "@/lib/crop-image";
 import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplate, MeepoTemplateId } from "@/lib/meepo-templates";
 
 type Step = "idle" | "analyzing" | "generating" | "done" | "error";
 
-async function compressImage(
-  base64: string,
-  mimeType: string,
-): Promise<{ base64: string; mimeType: string }> {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => {
-      const MAX = 1024;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
-    };
-    img.src = `data:${mimeType};base64,${base64}`;
-  });
+interface ImageBlob {
+  imageBase64: string;
+  mimeType: string;
+}
+
+interface DebugArtifacts {
+  croppedInput: ImageBlob;
+  rawGenerated: ImageBlob;
+  finalSticker: ImageBlob;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -121,21 +113,19 @@ async function compositeFixedTemplate(
   return { base64: canvas.toDataURL("image/png").split(",")[1], mimeType: "image/png" };
 }
 
-interface Result {
-  imageBase64: string;
-  mimeType: string;
-}
+interface Result extends ImageBlob {}
 
 const STEP_KEYS = ["analyzing", "generating", "done"] as const;
 
 export default function Page() {
   const [photo, setPhoto] = useState<string | null>(null);
-  const [photoB64, setPhotoB64] = useState<string | null>(null);
-  const [photoMime, setPhotoMime] = useState("image/jpeg");
   const [step, setStep] = useState<Step>("idle");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [templateId, setTemplateId] = useState<MeepoTemplateId>(DEFAULT_TEMPLATE);
+  const [crop, setCrop] = useState<CropState>(DEFAULT_CROP);
+  const [debug, setDebug] = useState<DebugArtifacts | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -156,33 +146,37 @@ export default function Page() {
     reader.onload = (e) => {
       const url = e.target?.result as string;
       setPhoto(url);
-      setPhotoMime(file.type || "image/jpeg");
-      setPhotoB64(url.split(",")[1]);
+      setCrop(DEFAULT_CROP);
       setStep("idle");
       setResult(null);
+      setDebug(null);
+      setShowDebug(false);
       setError("");
     };
     reader.readAsDataURL(file);
   }, []);
 
   const generate = useCallback(async () => {
-    if (!photoB64 || step === "analyzing" || step === "generating") return;
+    if (!photo || step === "analyzing" || step === "generating") return;
 
     setStep("analyzing");
     setError("");
     setResult(null);
+    setDebug(null);
 
     try {
       setStep("generating");
 
-      const { base64: compressedB64, mimeType: compressedMime } = await compressImage(photoB64, photoMime);
+      const tpl = getTemplate(templateId);
+      const cropped = await exportTemplateCrop(photo, tpl.aspect, crop);
+      const croppedInput: ImageBlob = { imageBase64: cropped.base64, mimeType: cropped.mimeType };
 
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: compressedB64,
-          imageMimeType: compressedMime,
+          imageBase64: cropped.base64,
+          imageMimeType: cropped.mimeType,
           templateId,
         }),
       });
@@ -195,21 +189,26 @@ export default function Page() {
       }
       if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
-      // The model returns a BGN head (ears + style locked by the reference) on white.
-      // Clip it into the real selected template's silhouette so shape + size match the
-      // approved die-cut Template exactly, then die-cut.
+      const rawGenerated: ImageBlob = {
+        imageBase64: data.imageBase64 as string,
+        mimeType: (data.mimeType as string) ?? "image/png",
+      };
+
       const sticker = await compositeFixedTemplate(
-        data.imageBase64 as string,
-        (data.mimeType as string) ?? "image/png",
+        rawGenerated.imageBase64,
+        rawGenerated.mimeType,
         getTemplate((data.templateId as MeepoTemplateId) ?? templateId),
       );
-      setResult({ imageBase64: sticker.base64, mimeType: sticker.mimeType });
+      const finalSticker: ImageBlob = { imageBase64: sticker.base64, mimeType: sticker.mimeType };
+
+      setResult(finalSticker);
+      setDebug({ croppedInput, rawGenerated, finalSticker });
       setStep("done");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setStep("error");
     }
-  }, [photoB64, photoMime, templateId, step]);
+  }, [photo, templateId, crop, step]);
 
   const download = useCallback(() => {
     if (!result) return;
@@ -255,15 +254,21 @@ export default function Page() {
         <div className="flex flex-col gap-5 pt-1">
         <TemplatePicker
           value={templateId}
-          onChange={setTemplateId}
+          onChange={(id) => {
+            setTemplateId(id);
+            setCrop(DEFAULT_CROP);
+          }}
           disabled={isLoading}
         />
 
         <MeepoHeadUpload
           template={template}
           photo={photo}
+          crop={crop}
+          onCropChange={setCrop}
+          disabled={isLoading}
+          onRequestUpload={() => fileRef.current?.click()}
           dragging={dragging}
-          onClick={() => fileRef.current?.click()}
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
@@ -366,6 +371,41 @@ export default function Page() {
                 บันทึก PNG
               </button>
             </div>
+
+            {debug && (
+              <div className="mt-5 text-left">
+                <button
+                  type="button"
+                  onClick={() => setShowDebug((v) => !v)}
+                  className="text-xs font-bold text-bgn-muted hover:text-bgn-primary w-full text-center"
+                >
+                  {showDebug ? "ซ่อนขั้นตอนกลาง ▲" : "ดูขั้นตอนกลาง (debug) ▼"}
+                </button>
+                {showDebug && (
+                  <div className="mt-3 grid gap-3">
+                    {(
+                      [
+                        ["รูปที่ส่งเข้า AI (หลัง crop)", debug.croppedInput],
+                        ["ผลจาก Gemini (ก่อนตัด template)", debug.rawGenerated],
+                        ["สติกเกอร์สุดท้าย (หลัง composite)", debug.finalSticker],
+                      ] as const
+                    ).map(([label, img]) => (
+                      <div key={label} className="bg-white rounded-xl p-2 ring-1 ring-bgn-border">
+                        <p className="text-[11px] font-bold text-bgn-muted mb-1.5">{label}</p>
+                        <div className="bg-[#eef0f3] rounded-lg p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={`data:${img.mimeType};base64,${img.imageBase64}`}
+                            alt={label}
+                            className="w-full max-h-40 object-contain mx-auto block"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
