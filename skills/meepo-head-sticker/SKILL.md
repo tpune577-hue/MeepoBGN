@@ -1,11 +1,11 @@
 ---
 name: meepo-head-sticker
 description: Locked spec for generating BGN Meepo chibi HEAD stickers. A fixed BGN head reference (ears + face structure + art style) is locked; a Gemini image-edit model redraws the uploaded person onto that reference, then the result is cut out as a die-cut sticker. Used by app/api/generate to keep every output on-spec.
-version: 2
+version: 4
 applies_to: gemini-2.5-flash-image (image edit)
 ---
 
-# Meepo Head Sticker — Locked Generation Spec (v2)
+# Meepo Head Sticker — Locked Generation Spec (v4)
 
 Single source of truth for generating Meepo chibi **head** stickers. The API reads
 this file at request time and feeds it to the Gemini image-edit model. If anything
@@ -24,7 +24,7 @@ job is to make that reference resemble the uploaded person.
                          |
         BGN head that looks like the person (ears + style kept)
                          |
-            die-cut (remove white bg + white sticker border)
+     clip to the real Template mask + draw the Template's own outline
                          |
                    final head sticker
 ```
@@ -35,10 +35,16 @@ locked by the reference. This is what stops the output from drifting off-templat
 ## Fixed assets (do not change without re-locking)
 - `public/refs/bgn-head-ref.png` — the locked BGN head reference (rounded head, simple
   round ears on both sides, thin dark-brown outline, matte flat shading). Image 1 in
-  the request.
-- `public/templates/bgn-head-mask.png` — the locked head+ears **silhouette** (derived
-  from the reference). Every output is clipped to this exact shape + size so the sticker
-  always fits the frame. Includes the ears.
+  the request. Used only to guide the model's *art style*; it is not the shape the
+  final sticker is cut to (see below).
+- `public/templates/human-mask.png` + `human-frame.png`, and `public/templates/
+  animal-mask.png` + `animal-frame.png` — the **real, approved die-cut Templates** (one
+  per ear variant), each a matched pair: `*-mask.png` is the filled alpha silhouette
+  used to clip the generated head, `*-frame.png` is the exact outline artwork (with the
+  physical stencil's registration notch tabs) drawn on top. These are also what the
+  pre-upload crop preview (`MeepoHeadUpload`) uses, so preview and final output are the
+  same shape. **This Template Size/shape is fixed to the physical die-cut stencil and
+  must never be changed** — only what's drawn inside it may change.
 - The uploaded user photo is image 2.
 
 ## Locked art style — BGN meeple (must match the reference family)
@@ -93,8 +99,31 @@ Output ONLY the head and a small neck, centered, facing forward, on a plain soli
 
 ## Clip + die-cut step (enforced in code, do not skip)
 1. Trim the plain white margin around the generated head (content bounding box).
-2. Scale it to **cover** the fixed `bgn-head-mask.png` box and **clip** to that
-   silhouette — this locks the head shape + size (with ears) on every sticker.
-3. Add a clean **white die-cut border** + a thin dark outline by dilating the mask
-   silhouette behind the head.
-4. Export a transparent PNG.
+2. Scale it to **fit inside** the real selected Template's mask box (`human-mask.png`
+   or `animal-mask.png`, matching the `templateId` from the request), inset by the
+   print safety margin (see below), then **clip** to that silhouette — this locks the
+   head shape + size to the exact approved Template on every sticker while leaving a
+   bleed gap to the cut edge.
+3. Draw that same Template's own outline artwork (`human-frame.png` /
+   `animal-frame.png`) on top, unscaled relative to the mask — this is the exact
+   physical die-cut line (registration tabs included), not a synthesized border.
+4. Export a transparent PNG, same pixel size as the Template's mask/frame pair
+   (× `OUT_SCALE`) — no extra padding is added around it.
+
+### Print safety margin (bleed) — locked
+Printing and die-cutting are two separate physical steps and are never perfectly
+aligned, so the artwork must never touch the cut line — if it does, mismatch during
+production visibly clips the art. There must be a visible **gap of ~0.5 cm** (in the
+final printed sticker) between the drawn head/hair and the outer die-cut edge, on
+every side.
+
+- Implemented as `SAFETY_MARGIN_RATIO = 0.08` (8% inset on each side) in
+  `app/page.tsx`'s `compositeFixedTemplate`, expressed as a **percentage of the
+  Template box** rather than an absolute unit — this way the gap scales automatically
+  regardless of what physical size the sticker is printed at, tuned for the current
+  ~4 cm print size. If the production print size changes, retune this ratio so the
+  gap still measures ~0.5 cm on the physical sticker.
+- The **Template Size/shape itself is never changed** — `human-mask.png` /
+  `human-frame.png` and `animal-mask.png` / `animal-frame.png` stay at their existing
+  pixel dimensions (fixed to the physical die-cut stencil). Only the artwork drawn
+  *inside* that fixed box is scaled down and centered to create the gap.

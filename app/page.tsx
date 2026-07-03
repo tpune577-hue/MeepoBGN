@@ -6,7 +6,7 @@ import { MeepoMascot } from "../components/MeepoMascot";
 import { SakuraDecor } from "../components/SakuraDecor";
 import { TemplatePicker } from "../components/TemplatePicker";
 import { MeepoHeadUpload } from "../components/MeepoHeadUpload";
-import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplateId } from "@/lib/meepo-templates";
+import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplate, MeepoTemplateId } from "@/lib/meepo-templates";
 
 type Step = "idle" | "analyzing" | "generating" | "done" | "error";
 
@@ -39,9 +39,16 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Locked head+ears silhouette — every sticker is clipped to this exact shape + size. */
-const FIXED_MASK_SRC = "/templates/bgn-head-mask.png";
-const OUT_SCALE = 4; // upscale the locked mask px for print-ready output
+const OUT_SCALE = 4; // upscale the template's locked px for print-ready output
+
+/**
+ * Safety margin between the drawn artwork and the die-cut edge (print bleed tolerance —
+ * printing and cutting are never perfectly aligned, so the art must not touch the cut
+ * line). Expressed as a % of the template box on each side rather than an absolute
+ * unit, so it scales automatically no matter what physical size the template is printed
+ * at. The template's own pixel size (mw/mh below) is never changed by this margin.
+ */
+const SAFETY_MARGIN_RATIO = 0.08;
 
 /** Bounding box of the actual drawn head, ignoring the plain white margin around it. */
 function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
@@ -64,67 +71,52 @@ function contentBox(img: HTMLImageElement): { sx: number; sy: number; sw: number
   return { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 };
 }
 
-/** A solid-color copy of the mask silhouette (used for the die-cut border + outline). */
-function tintSilhouette(mask: HTMLImageElement, w: number, h: number, color: string): HTMLCanvasElement {
-  const c = document.createElement("canvas");
-  c.width = w; c.height = h;
-  const ctx = c.getContext("2d")!;
-  ctx.drawImage(mask, 0, 0, w, h);
-  ctx.globalCompositeOperation = "source-in";
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, w, h);
-  return c;
-}
-
 /**
- * Clip the generated BGN head into the FIXED head+ears silhouette so every sticker has
- * the exact same shape + size (fits the frame), then add a white die-cut border and a
- * thin dark outline. Returns a transparent PNG.
+ * Clip the generated BGN head into the REAL selected template's silhouette (the exact
+ * approved die-cut stencil — human-mask/frame.png or animal-mask/frame.png, same assets
+ * used for the pre-upload preview) so the final sticker always fits that physical
+ * Template Size exactly, then draw that template's own outline artwork on top (not a
+ * synthesized border) so the cut line matches production 1:1. Returns a transparent PNG.
  */
 async function compositeFixedTemplate(
   generatedBase64: string,
   generatedMime: string,
+  template: MeepoTemplate,
 ): Promise<{ base64: string; mimeType: string }> {
-  const [img, mask] = await Promise.all([
+  const [img, mask, frame] = await Promise.all([
     loadImage(`data:${generatedMime};base64,${generatedBase64}`),
-    loadImage(FIXED_MASK_SRC),
+    loadImage(template.maskSrc),
+    loadImage(template.frameSrc),
   ]);
 
   const mw = mask.naturalWidth * OUT_SCALE;
   const mh = mask.naturalHeight * OUT_SCALE;
-  const border = Math.max(8, Math.round(Math.max(mw, mh) * 0.02));
-  const pad = border + 4;
 
-  // head clipped to the fixed silhouette: trim the white margin, cover-fill the mask
-  // box, then keep only what's inside the silhouette.
+  // head clipped to the real template silhouette: trim the white margin, fit the art
+  // inside a box inset by the safety margin (leaving a print-bleed gap to the die-cut
+  // edge on every side), then keep only what's inside the silhouette.
   const layer = document.createElement("canvas");
   layer.width = mw; layer.height = mh;
   const lctx = layer.getContext("2d")!;
   lctx.imageSmoothingQuality = "high";
   const { sx, sy, sw, sh } = contentBox(img);
-  const cover = Math.max(mw / sw, mh / sh);
-  const dw = sw * cover, dh = sh * cover;
+  const innerW = mw * (1 - SAFETY_MARGIN_RATIO * 2);
+  const innerH = mh * (1 - SAFETY_MARGIN_RATIO * 2);
+  const contain = Math.min(innerW / sw, innerH / sh);
+  const dw = sw * contain, dh = sh * contain;
   lctx.drawImage(img, sx, sy, sw, sh, (mw - dw) / 2, (mh - dh) / 2, dw, dh);
   lctx.globalCompositeOperation = "destination-in";
   lctx.drawImage(mask, 0, 0, mw, mh);
 
-  // assemble: white border + thin dark outline + clipped head
+  // assemble: clipped head + the template's own outline artwork on top (same Template
+  // Size + shape as the pre-upload preview — no extra padding or synthesized border).
   const canvas = document.createElement("canvas");
-  canvas.width = mw + pad * 2;
-  canvas.height = mh + pad * 2;
+  canvas.width = mw;
+  canvas.height = mh;
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingQuality = "high";
-  const white = tintSilhouette(mask, mw, mh, "#ffffff");
-  const dark = tintSilhouette(mask, mw, mh, "#2b2b2b");
-  const ring = (sil: HTMLCanvasElement, r: number, steps: number) => {
-    for (let i = 0; i < steps; i++) {
-      const a = (i / steps) * Math.PI * 2;
-      ctx.drawImage(sil, pad + Math.cos(a) * r, pad + Math.sin(a) * r);
-    }
-  };
-  ring(white, border, 48); // outer white die-cut border
-  ring(dark, OUT_SCALE * 1.5, 24); // thin dark outline just outside the head
-  ctx.drawImage(layer, pad, pad);
+  ctx.drawImage(layer, 0, 0);
+  ctx.drawImage(frame, 0, 0, mw, mh);
 
   return { base64: canvas.toDataURL("image/png").split(",")[1], mimeType: "image/png" };
 }
@@ -204,11 +196,12 @@ export default function Page() {
       if (!res.ok || data.error) throw new Error((data.error as string) ?? "Server error");
 
       // The model returns a BGN head (ears + style locked by the reference) on white.
-      // Clip it into the FIXED head+ears silhouette so shape + size are identical every
-      // time, then die-cut.
+      // Clip it into the real selected template's silhouette so shape + size match the
+      // approved die-cut Template exactly, then die-cut.
       const sticker = await compositeFixedTemplate(
         data.imageBase64 as string,
         (data.mimeType as string) ?? "image/png",
+        getTemplate((data.templateId as MeepoTemplateId) ?? templateId),
       );
       setResult({ imageBase64: sticker.base64, mimeType: sticker.mimeType });
       setStep("done");
