@@ -339,7 +339,7 @@ export default function Page() {
                 Meeple ของคุณพร้อมแล้ว
               </span>
             </div>
-            <div className="inline-block bg-[#eef0f3] rounded-2xl p-3 shadow-sm ring-1 ring-bgn-border">
+            <div className="inline-block bg-white rounded-2xl p-3 shadow-sm ring-1 ring-bgn-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`data:${result.mimeType};base64,${result.imageBase64}`}
