@@ -38,7 +38,7 @@ export function TemplatePicker({ value, onChange, disabled }: TemplatePickerProp
   return (
     <div className="bg-white rounded-3xl p-4 shadow-md ring-1 ring-bgn-border">
       <p className="text-sm font-extrabold text-bgn-ink text-center mb-3">
-        เลือกแบบหัว Meepo
+        เลือกแบบหัว Meeple
       </p>
       <div className={`grid gap-3 ${templates.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
         {templates.map((t) => {
@@ -59,7 +59,9 @@ export function TemplatePicker({ value, onChange, disabled }: TemplatePickerProp
               <div className={`text-base font-extrabold mt-1.5 ${active ? "text-bgn-primary-hover" : "text-bgn-ink"}`}>
                 {t.label}
               </div>
-              <div className="text-xs text-bgn-muted font-semibold mt-0.5">{t.description}</div>
+              {t.description && (
+                <div className="text-xs text-bgn-muted font-semibold mt-0.5">{t.description}</div>
+              )}
             </button>
           );
         })}

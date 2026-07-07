@@ -9,8 +9,8 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Create your Meepo — By BGN",
-  description: "อัปโหลดรูปหน้า → AI สร้าง chibi Meepo sticker สำหรับติด figure",
+  title: "Create your Meeple — By BGN",
+  description: "อัปโหลดรูปหน้า → AI สร้าง chibi Meeple sticker สำหรับติด figure",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
