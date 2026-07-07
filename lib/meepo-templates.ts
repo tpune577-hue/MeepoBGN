@@ -12,6 +12,8 @@ export interface MeepoTemplate {
   maskSrc: string;
   /** Black outline artwork drawn on top of the photo */
   frameSrc: string;
+  /** Whether this template is shown in the picker; defaults to true */
+  enabled?: boolean;
 }
 
 export const MEEPO_TEMPLATES: Record<MeepoTemplateId, MeepoTemplate> = {
@@ -34,6 +36,7 @@ export const MEEPO_TEMPLATES: Record<MeepoTemplateId, MeepoTemplate> = {
     aspect: 325 / 235,
     maskSrc: "/templates/animal-mask.png",
     frameSrc: "/templates/animal-frame.png",
+    enabled: false,
   },
 };
 
