@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { MeepoMascot } from "../components/MeepoMascot";
 import { SakuraDecor } from "../components/SakuraDecor";
-import { TemplatePicker } from "../components/TemplatePicker";
 import { MeepoHeadUpload } from "../components/MeepoHeadUpload";
 import { DEFAULT_CROP, CropState, exportTemplateCrop } from "@/lib/crop-image";
 import { DEFAULT_TEMPLATE, getTemplate, MeepoTemplate, MeepoTemplateId } from "@/lib/meepo-templates";
@@ -122,7 +121,7 @@ export default function Page() {
   const [step, setStep] = useState<Step>("idle");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
-  const [templateId, setTemplateId] = useState<MeepoTemplateId>(DEFAULT_TEMPLATE);
+  const templateId: MeepoTemplateId = DEFAULT_TEMPLATE;
   const [crop, setCrop] = useState<CropState>(DEFAULT_CROP);
   const [debug, setDebug] = useState<DebugArtifacts | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -252,15 +251,6 @@ export default function Page() {
         </header>
 
         <div className="flex flex-col gap-5 pt-1">
-        <TemplatePicker
-          value={templateId}
-          onChange={(id) => {
-            setTemplateId(id);
-            setCrop(DEFAULT_CROP);
-          }}
-          disabled={isLoading}
-        />
-
         <MeepoHeadUpload
           template={template}
           photo={photo}
