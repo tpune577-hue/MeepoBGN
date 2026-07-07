@@ -20,7 +20,7 @@ export const MEEPO_TEMPLATES: Record<MeepoTemplateId, MeepoTemplate> = {
   human: {
     id: "human",
     label: "หัวคน",
-    description: "ทรงโดมมน",
+    description: "",
     shapePrompt:
       "head silhouette must exactly match a rounded dome shape: a smooth wide semicircular top, gently flaring straight-ish sides, two tiny rounded ear nubs poking out at the lower sides, and a flat bottom edge with two small notch tabs near the bottom corners; no animal ears, no horns",
     aspect: 281 / 218,

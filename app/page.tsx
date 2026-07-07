@@ -292,7 +292,7 @@ export default function Page() {
           {step === "analyzing"
             ? "กำลังวิเคราะห์ใบหน้า..."
             : step === "generating"
-              ? "กำลังสร้าง Meepo..."
+              ? "กำลังสร้าง Meeple..."
               : "สร้าง Meeple Sticker"}
         </button>
 
@@ -336,7 +336,7 @@ export default function Page() {
             <div className="flex items-center justify-center gap-2 mb-4">
               <MeepoMascot size={28} />
               <span className="text-sm font-extrabold text-bgn-primary-hover tracking-wide">
-                Meepo ของคุณพร้อมแล้ว
+                Meeple ของคุณพร้อมแล้ว
               </span>
             </div>
             <div className="inline-block bg-[#eef0f3] rounded-2xl p-3 shadow-sm ring-1 ring-bgn-border">
